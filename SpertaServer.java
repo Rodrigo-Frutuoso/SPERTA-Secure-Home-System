@@ -96,7 +96,10 @@ public class SpertaServer {
 		}
 	}
 
-	//Threads utilizadas para comunicacao com os clientes
+	// Threads utilizadas para comunicacao com os clientes
+    // 1. Autenticar user + password ✓ (feito)
+    // 2. Se bem-sucedido → entrar num loop para receber comandos do cliente
+    // 3. Processar os comandos e responder
 	class ServerThread extends Thread {
 
 		private Socket socket = null;
@@ -127,6 +130,8 @@ public class SpertaServer {
 				if (authenticated) {
 					System.out.println("User autenticado: " + user);
 					outStream.writeObject(Boolean.TRUE);
+
+                    //fazer aqui loop para ler comandos do cliente e responder
 				} else {
 					System.out.println("Falha de autenticacao para user: " + user);
 					outStream.writeObject(Boolean.FALSE);
