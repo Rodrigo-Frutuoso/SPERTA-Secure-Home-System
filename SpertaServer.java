@@ -4,15 +4,24 @@
 *
 ***************************************************************************/
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 
 //Servidor SpertaServer
 
 public class SpertaServer {
+
+	private static final String USER_FILE = "user.txt";
+	private static final Object fileLock = new Object();
 
 	public static void main(String[] args) {
 		System.out.println("servidor: main");
@@ -44,6 +53,48 @@ public class SpertaServer {
 		//sSoc.close();
 	}
 
+	// Autentica user existente ou regista novo user
+	private static synchronized boolean authenticateOrRegister(String user, String passwd) {
+		if (user == null || passwd == null || user.isEmpty() || passwd.isEmpty()) {
+			return false;
+		}
+
+		synchronized (fileLock) {
+			Map<String, String> users = new HashMap<>();
+
+			// Ler users existentes
+			try (BufferedReader reader = new BufferedReader(new FileReader(USER_FILE))) {
+				String line;
+				while ((line = reader.readLine()) != null) {
+					if (line.trim().isEmpty()) continue;
+					String[] lineContent = line.split(":", 2);
+					if (lineContent.length == 2) {
+						users.put(lineContent[0], lineContent[1]);
+					}
+				}
+			} catch (IOException e) {
+				System.err.println("Erro ao ler ficheiro de users: " + e.getMessage());
+				return false;
+			}
+
+			// Verificar se user existe
+			if (users.containsKey(user)) {
+				// User existe - verificar password
+				return users.get(user).equals(passwd);
+			} else {
+				// User novo - registar
+				try (BufferedWriter writer = new BufferedWriter(new FileWriter(USER_FILE, true))) {
+					writer.write(user + ":" + passwd);
+					writer.newLine();
+					System.out.println("Novo user registado: " + user);
+					return true;
+				} catch (IOException e) {
+					System.err.println("Erro ao registar novo user: " + e.getMessage());
+					return false;
+				}
+			}
+		}
+	}
 
 	//Threads utilizadas para comunicacao com os clientes
 	class ServerThread extends Thread {
@@ -71,11 +122,14 @@ public class SpertaServer {
 					e1.printStackTrace();
 				}
  			
-				if (user.length() != 0){
-					outStream.writeObject(new Boolean(true));
-				}
-				else {
-					outStream.writeObject(new Boolean(false));
+				// Autenticar ou registar user
+				boolean authenticated = authenticateOrRegister(user, passwd);
+				if (authenticated) {
+					System.out.println("User autenticado: " + user);
+					outStream.writeObject(Boolean.TRUE);
+				} else {
+					System.out.println("Falha de autenticacao para user: " + user);
+					outStream.writeObject(Boolean.FALSE);
 				}
 
 				outStream.close();
