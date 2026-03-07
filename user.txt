@@ -1,0 +1,6 @@
+ricardo:ricky
+nuno:noble
+marcio:caetano
+rodrigo:frutas
+bernardo:mini
+
