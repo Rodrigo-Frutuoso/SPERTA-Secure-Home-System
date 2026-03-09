@@ -12,28 +12,39 @@ import java.util.Scanner;
 
 public class SpertaClient {
 
-	public static void main(String[] args) {
-		String user;
-		String password;
+	private static final int DEFAULT_PORT = 22345;
 
-		if (args.length >= 2) {
-			user = args[0];
-			password = args[1];
+	public static void main(String[] args) {
+		if (args.length < 3) {
+			System.err.println("Uso: SpertaClient <serverAddress> <user-id> <password>");
+			System.err.println("     serverAddress: <IP/hostname>[:porto]");
+			System.exit(-1);
+		}
+
+		String serverAddress = args[0];
+		String user = args[1];
+		String password = args[2];
+
+		String host;
+		int port = DEFAULT_PORT;
+		if (serverAddress.contains(":")) {
+			String[] parts = serverAddress.split(":", 2);
+			host = parts[0];
+			try {
+				port = Integer.parseInt(parts[1]);
+			} catch (NumberFormatException e) {
+				System.err.println("Porto inválido: " + parts[1] + ". A usar porto por omissão: " + DEFAULT_PORT);
+			}
 		} else {
-			Scanner scanner = new Scanner(System.in);
-			System.out.print("User: ");
-			user = scanner.nextLine();
-			System.out.print("Password: ");
-			password = scanner.nextLine();
-			scanner.close();
+			host = serverAddress;
 		}
 
 		SpertaClient client = new SpertaClient();
-		client.authenticate(user, password);
+		client.authenticate(host, port, user, password);
 	}
 
-	public void authenticate(String user, String password) {
-		try (Socket socket = new Socket("localhost", 23456);
+	public void authenticate(String host, int port, String user, String password) {
+		try (Socket socket = new Socket(host, port);
 			 ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
 			 ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream())) {
 

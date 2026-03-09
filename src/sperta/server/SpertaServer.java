@@ -20,20 +20,30 @@ import java.util.Map;
 
 public class SpertaServer {
 
-	private static final String USER_FILE = "user.txt";
+	private static final String USER_FILE = "src/sperta/data/user.txt";
 	private static final Object fileLock = new Object();
 
+	private static final int DEFAULT_PORT = 22345;
+
 	public static void main(String[] args) {
-		System.out.println("servidor: main");
+		int port = DEFAULT_PORT;
+		if (args.length >= 1) {
+			try {
+				port = Integer.parseInt(args[0]);
+			} catch (NumberFormatException e) {
+				System.err.println("Porto inválido: " + args[0] + ". A usar porto por omissão: " + DEFAULT_PORT);
+			}
+		}
+		System.out.println("servidor: main "+ port);
 		SpertaServer server = new SpertaServer();
-		server.startServer();
+		server.startServer(port);
 	}
 
-	public void startServer (){
+	public void startServer(int port) {
 		ServerSocket sSoc = null;
         
 		try {
-			sSoc = new ServerSocket(23456);
+			sSoc = new ServerSocket(port);
 		} catch (IOException e) {
 			System.err.println(e.getMessage());
 			System.exit(-1);
