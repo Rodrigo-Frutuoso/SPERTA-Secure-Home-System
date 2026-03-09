@@ -5,6 +5,7 @@
 ***************************************************************************/
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
@@ -48,6 +49,20 @@ public class SpertaClient {
 			 ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
 			 ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream())) {
 
+			// Atestação: enviar tamanho do próprio .class ao servidor
+			long classSize = getClassSize();
+			outStream.writeLong(classSize);
+			outStream.flush();
+
+			String attestResult = (String) inStream.readObject();
+			if ("ATTESTATION_OK".equals(attestResult)) {
+				System.out.println("ATTESTATION OK");
+			} else {
+				System.out.println("ATTESTATION FAILED");
+				return;
+			}
+
+			// Autenticação
 			outStream.writeObject(user);
 			outStream.writeObject(password);
 			outStream.flush();
@@ -63,6 +78,15 @@ public class SpertaClient {
 			System.err.println("Erro de comunicacao com o servidor: " + e.getMessage());
 		} catch (ClassNotFoundException e) {
 			System.err.println("Resposta invalida do servidor.");
+		}
+	}
+
+	private long getClassSize() {
+		try (InputStream is = SpertaClient.class.getResourceAsStream("SpertaClient.class")) {
+			if (is == null) return -1;
+			return is.readAllBytes().length;
+		} catch (IOException e) {
+			return -1;
 		}
 	}
 }

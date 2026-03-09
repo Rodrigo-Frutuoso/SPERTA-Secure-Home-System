@@ -21,6 +21,7 @@ import java.util.Map;
 public class SpertaServer {
 
 	private static final String USER_FILE = "src/sperta/data/user.txt";
+	private static final String ATTESTATION_FILE = "src/sperta/client/attestation.txt";
 	private static final Object fileLock = new Object();
 
 	private static final int DEFAULT_PORT = 22345;
@@ -61,6 +62,20 @@ public class SpertaServer {
 		    
 		}
 		//sSoc.close();
+	}
+
+	// Lê o tamanho esperado do cliente a partir do ficheiro de atestação
+	private static long readExpectedClientSize() {
+		try (BufferedReader reader = new BufferedReader(new FileReader(ATTESTATION_FILE))) {
+			String line = reader.readLine();
+			if (line != null && line.contains(":")) {
+				String[] parts = line.split(":", 2);
+				return Long.parseLong(parts[1].trim());
+			}
+		} catch (IOException | NumberFormatException e) {
+			System.err.println("Erro ao ler attestation.txt: " + e.getMessage());
+		}
+		return -1;
 	}
 
 	// Autentica user existente ou regista novo user
@@ -124,6 +139,19 @@ public class SpertaServer {
 				ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
 				ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
 
+// Atestação: receber tamanho do .class do cliente
+				long clientSize = inStream.readLong();
+				long expectedSize = readExpectedClientSize();
+				System.out.println("Atestação: recebido=" + clientSize + ", esperado=" + expectedSize);
+				if (clientSize == expectedSize && expectedSize != -1) {
+					outStream.writeObject("ATTESTATION_OK");
+					outStream.flush();
+				} else {
+					outStream.writeObject("ATTESTATION_FAILED");
+					outStream.flush();
+					socket.close();
+					return;
+				}
 				String user = null;
 				String passwd = null;
 			
