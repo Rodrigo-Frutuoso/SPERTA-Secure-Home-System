@@ -4,5 +4,3 @@ marcio:caetano
 rodrigo:frutas
 bernardo:mini
 
-simao:alex
-sandro:bot

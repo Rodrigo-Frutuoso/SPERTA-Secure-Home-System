@@ -1,2 +1,0 @@
-exemplo de mensagem cliente -> servidor
-"Frutas, para de copiar do chatGPT!"
