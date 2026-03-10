@@ -79,9 +79,10 @@ public class SpertaServer {
 	}
 
 	// Autentica user existente ou regista novo user
-	private static synchronized boolean authenticateOrRegister(String user, String passwd) {
+	// Retorna: "OK-USER", "OK-NEW-USER" ou "WRONG-PWD"
+	private static String authenticateOrRegister(String user, String passwd) {
 		if (user == null || passwd == null || user.isEmpty() || passwd.isEmpty()) {
-			return false;
+			return "WRONG-PWD";
 		}
 
 		synchronized (fileLock) {
@@ -99,23 +100,26 @@ public class SpertaServer {
 				}
 			} catch (IOException e) {
 				System.err.println("Erro ao ler ficheiro de users: " + e.getMessage());
-				return false;
+				return "WRONG-PWD";
 			}
 
 			// Verificar se user existe
 			if (users.containsKey(user)) {
-				// User existe - verificar password
-				return users.get(user).equals(passwd);
+				if (users.get(user).equals(passwd)) {
+					return "OK-USER";
+				} else {
+					return "WRONG-PWD";
+				}
 			} else {
 				// User novo - registar
 				try (BufferedWriter writer = new BufferedWriter(new FileWriter(USER_FILE, true))) {
 					writer.write(user + ":" + passwd);
 					writer.newLine();
 					System.out.println("Novo user registado: " + user);
-					return true;
+					return "OK-NEW-USER";
 				} catch (IOException e) {
 					System.err.println("Erro ao registar novo user: " + e.getMessage());
-					return false;
+					return "WRONG-PWD";
 				}
 			}
 		}
@@ -153,27 +157,22 @@ public class SpertaServer {
 					return;
 				}
 				String user = null;
-				String passwd = null;
-			
-				try {
-					user = (String)inStream.readObject();
-					passwd = (String)inStream.readObject();
-					System.out.println("thread: depois de receber a password e o user");
-				}catch (ClassNotFoundException e1) {
-					e1.printStackTrace();
-				}
- 			
-				// Autenticar ou registar user
-				boolean authenticated = authenticateOrRegister(user, passwd);
-				if (authenticated) {
-					System.out.println("User autenticado: " + user);
-					outStream.writeObject(Boolean.TRUE);
+				String authResult;
+				do {
+					try {
+						user = (String) inStream.readObject();
+						String passwd = (String) inStream.readObject();
+						authResult = authenticateOrRegister(user, passwd);
+					} catch (ClassNotFoundException e1) {
+						e1.printStackTrace();
+						authResult = "WRONG-PWD";
+					}
+					outStream.writeObject(authResult);
+					outStream.flush();
+					System.out.println("Autenticacao user '" + user + "': " + authResult);
+				} while ("WRONG-PWD".equals(authResult));
 
-                    //fazer aqui loop para ler comandos do cliente e responder
-				} else {
-					System.out.println("Falha de autenticacao para user: " + user);
-					outStream.writeObject(Boolean.FALSE);
-				}
+				// fazer aqui loop para ler comandos do cliente e responder
 
 				outStream.close();
 				inStream.close();

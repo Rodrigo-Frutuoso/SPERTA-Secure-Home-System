@@ -63,16 +63,25 @@ public class SpertaClient {
 			}
 
 			// Autenticação
-			outStream.writeObject(user);
-			outStream.writeObject(password);
-			outStream.flush();
+			Scanner scanner = new Scanner(System.in);
+			String currentPassword = password;
+			String authResult;
+			do {
+				outStream.writeObject(user);
+				outStream.writeObject(currentPassword);
+				outStream.flush();
+				authResult = (String) inStream.readObject();
+				if ("WRONG-PWD".equals(authResult)) {
+					System.out.println("Password incorreta. Tente novamente.");
+					System.out.print("Password: ");
+					currentPassword = scanner.nextLine();
+				}
+			} while ("WRONG-PWD".equals(authResult));
 
-			Boolean authenticated = (Boolean) inStream.readObject();
-
-			if (Boolean.TRUE.equals(authenticated)) {
-				System.out.println("Autenticacao bem sucedida.");
+			if ("OK-NEW-USER".equals(authResult)) {
+				System.out.println("OK-NEW-USER");
 			} else {
-				System.out.println("Falha na autenticacao.");
+				System.out.println("OK-USER");
 			}
 		} catch (IOException e) {
 			System.err.println("Erro de comunicacao com o servidor: " + e.getMessage());
