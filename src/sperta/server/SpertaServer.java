@@ -6,6 +6,7 @@
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -21,8 +22,8 @@ import java.util.Map;
 public class SpertaServer {
 
 	private static final String USER_FILE = "src/sperta/data/user.txt";
-	private static final String ATTESTATION_FILE = "src/sperta/client/attestation.txt";
-	private static final String HOUSES_FILE = "src/sperta/data/houses.txt";
+	private static final String ATTESTATION_FILE = "src/sperta/server/attestation.txt";;
+	private static final String HOUSES_FILE = "src/sperta/data/all_houses.txt";
 	private static final String STATES_DIR  = "src/sperta/data/states/";
 	private static final String LOGS_DIR    = "src/sperta/data/logs/";
 	private static final Object fileLock = new Object();
@@ -130,11 +131,37 @@ public class SpertaServer {
 
 	// ─── Handlers de comandos (servidor) ───────────────────────────────────────
 
+	// ...existing code...
 	private static void handleCreate(String hm, String owner, ObjectOutputStream out)
 			throws IOException {
-		// TODO: verificar se hm já existe; se não → criar entrada em HOUSES_FILE com owner
-		//       responder OK ou NOK
-	}
+		synchronized (fileLock) {
+
+			if (houseExists(hm)) {
+				out.writeObject("NOK");
+				out.flush();
+				return;
+			}
+
+			
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter(HOUSES_FILE, true))) {
+				writer.write(hm + "|" + owner);
+				writer.newLine();
+			}
+
+			File houseFile = new File("src/sperta/data/houses/" + hm + ".txt");
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter(houseFile))) {
+				writer.write("[permissions]");
+				writer.newLine();
+				writer.newLine();
+				writer.write("[devices]");
+				writer.newLine();
+        }
+
+        out.writeObject("OK");
+        out.flush();
+    }
+}
+// ...existing code...}
 
 	private static void handleAdd(String user1, String hm, String s,
 			String requester, ObjectOutputStream out) throws IOException {
@@ -179,32 +206,112 @@ public class SpertaServer {
 
 	// ─── Helpers ─────────────────────────────────────────────────────────────────
 
+	// ...existing code...
+
 	private static boolean houseExists(String hm) {
-		// TODO: verificar em HOUSES_FILE se existe entrada para hm
-		return false;
+		synchronized (fileLock) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(HOUSES_FILE))) {
+				String line;
+				while ((line = reader.readLine()) != null) {
+					if (line.trim().isEmpty()) continue;
+					String[] parts = line.split("\\|", 2);
+					if (parts[0].equals(hm)) return true;
+				}
+			} catch (IOException e) {
+				System.err.println("Erro ao ler houses: " + e.getMessage());
+			}
+			return false;
+		}
 	}
 
 	private static boolean isOwner(String hm, String user) {
-		// TODO: verificar em HOUSES_FILE se user é o owner de hm
-		return false;
+		synchronized (fileLock) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(HOUSES_FILE))) {
+				String line;
+				while ((line = reader.readLine()) != null) {
+					if (line.trim().isEmpty()) continue;
+					String[] parts = line.split("\\|", 2);
+					if (parts.length == 2 && parts[0].equals(hm) && parts[1].equals(user))
+						return true;
+				}
+			} catch (IOException e) {
+				System.err.println("Erro ao ler houses: " + e.getMessage());
+			}
+			return false;
+		}
 	}
 
-	// s: identificador de seção (letra) ou "all"
 	private static boolean hasPermission(String hm, String user, String s) {
-		// TODO: verificar em HOUSES_FILE se user é owner de hm,
-		//       ou se tem permissão explícita para a seção s (ou "all")
-		return false;
+		// owner tem sempre permissão
+		if (isOwner(hm, user)) return true;
+
+		synchronized (fileLock) {
+			String houseFilePath = "src/sperta/data/houses/" + hm + ".txt";
+			try (BufferedReader reader = new BufferedReader(new FileReader(houseFilePath))) {
+				String line;
+				boolean inPermissions = false;
+				while ((line = reader.readLine()) != null) {
+					if (line.trim().equals("[permissions]")) { inPermissions = true; continue; }
+					if (line.trim().equals("[devices]")) break;
+					if (!inPermissions || line.trim().isEmpty()) continue;
+
+					// formato: user1|sala,quarto ou user1|all
+					String[] parts = line.split("\\|", 2);
+					if (parts.length == 2 && parts[0].equals(user)) {
+						String[] sections = parts[1].split(",");
+						for (String sec : sections) {
+							if (sec.trim().equals("all") || sec.trim().equals(s))
+								return true;
+						}
+					}
+				}
+			} catch (IOException e) {
+				System.err.println("Erro ao ler permissões: " + e.getMessage());
+			}
+			return false;
+		}
 	}
 
 	private static boolean deviceExists(String hm, String device) {
-		// TODO: verificar em HOUSES_FILE se device existe na casa hm
-		return false;
+		synchronized (fileLock) {
+			String houseFilePath = "src/sperta/data/houses/" + hm + ".txt";
+			try (BufferedReader reader = new BufferedReader(new FileReader(houseFilePath))) {
+				String line;
+				boolean inDevices = false;
+				while ((line = reader.readLine()) != null) {
+					if (line.trim().equals("[devices]")) { inDevices = true; continue; }
+					if (!inDevices || line.trim().isEmpty()) continue;
+
+					// formato: deviceId|secção
+					String[] parts = line.split("\\|", 2);
+					if (parts.length >= 1 && parts[0].equals(device))
+						return true;
+				}
+			} catch (IOException e) {
+				System.err.println("Erro ao ler dispositivos: " + e.getMessage());
+			}
+			return false;
+		}
 	}
 
 	private static boolean userExists(String user) {
-		// TODO: verificar em USER_FILE se user existe
-		return false;
+		synchronized (fileLock) {
+			try (BufferedReader reader = new BufferedReader(new FileReader(USER_FILE))) {
+				String line;
+				while ((line = reader.readLine()) != null) {
+					if (line.trim().isEmpty()) continue;
+					String[] parts = line.split(":", 2);
+					if (parts.length >= 1 && parts[0].equals(user))
+						return true;
+				}
+			} catch (IOException e) {
+				System.err.println("Erro ao ler users: " + e.getMessage());
+			}
+			return false;
+		}
 	}
+
+// ...existing code...
 
 	// Threads utilizadas para comunicacao com os clientes
 	class ServerThread extends Thread {
@@ -221,7 +328,7 @@ public class SpertaServer {
 				ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
 				ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
 
-// Atestação: receber tamanho do .class do cliente
+			// Atestação: receber tamanho do .class do cliente
 				long clientSize = inStream.readLong();
 				long expectedSize = readExpectedClientSize();
 				System.out.println("Atestação: recebido=" + clientSize + ", esperado=" + expectedSize);

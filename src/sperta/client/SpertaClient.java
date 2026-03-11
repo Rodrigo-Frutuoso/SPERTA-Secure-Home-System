@@ -140,7 +140,10 @@ public class SpertaClient {
 
 	private void handleCreate(String hm, ObjectOutputStream out, ObjectInputStream in)
 			throws IOException, ClassNotFoundException {
-		// TODO: enviar "CREATE <hm>" ao servidor e imprimir a resposta
+		out.writeObject("CREATE " + hm);
+		out.flush();
+		String response = (String) in.readObject();
+		System.out.println(response);
 	}
 
 	private void handleAdd(String user1, String hm, String s,
