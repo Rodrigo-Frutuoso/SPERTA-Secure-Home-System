@@ -155,13 +155,13 @@ public class SpertaServer {
 				writer.newLine();
 				writer.write("[devices]");
 				writer.newLine();
-        }
+			}
 
-        out.writeObject("OK");
-        out.flush();
-    }
-}
-// ...existing code...}
+			out.writeObject("OK");
+			out.flush();
+		}
+	}
+
 
 	private static void handleAdd(String user1, String hm, String s,
 			String requester, ObjectOutputStream out) throws IOException {
@@ -311,7 +311,7 @@ public class SpertaServer {
 		}
 	}
 
-// ...existing code...
+
 
 	// Threads utilizadas para comunicacao com os clientes
 	class ServerThread extends Thread {
