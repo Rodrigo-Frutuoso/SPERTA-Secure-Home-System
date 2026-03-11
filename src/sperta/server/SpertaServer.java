@@ -46,14 +46,14 @@ public class SpertaServer {
 
 	public void startServer(int port) {
 		ServerSocket sSoc = null;
-        
+
 		try {
 			sSoc = new ServerSocket(port);
 		} catch (IOException e) {
 			System.err.println(e.getMessage());
 			System.exit(-1);
 		}
-         
+
 		while(true) {
 			try {
 				Socket inSoc = sSoc.accept();
@@ -63,7 +63,7 @@ public class SpertaServer {
 		    catch (IOException e) {
 		        e.printStackTrace();
 		    }
-		    
+
 		}
 		//sSoc.close();
 	}
@@ -142,7 +142,7 @@ public class SpertaServer {
 				return;
 			}
 
-			
+
 			try (BufferedWriter writer = new BufferedWriter(new FileWriter(HOUSES_FILE, true))) {
 				writer.write(hm + "|" + owner);
 				writer.newLine();
@@ -165,10 +165,80 @@ public class SpertaServer {
 
 	private static void handleAdd(String user1, String hm, String s,
 			String requester, ObjectOutputStream out) throws IOException {
-		// TODO: verificar se requester é owner de hm (senão → NOPERM)
-		//       verificar se hm existe (senão → NOHM)
-		//       verificar se user1 existe (senão → NOUSER)
-		//       adicionar user1 com permissão s em hm → OK
+		synchronized (fileLock) {
+			// verificar se hm existe (senão → NOHM)
+			if (!houseExists(hm)) {
+				out.writeObject("NOHM");
+				out.flush();
+				return;
+			}
+			// verificar se requester é owner de hm (senão → NOPERM)
+			if (!isOwner(hm, requester)) {
+				out.writeObject("NOPERM");
+				out.flush();
+				return;
+			}
+			 // verificar se user1 existe (senão → NOUSER)
+			if (!userExists(user1)) {
+				out.writeObject("NOUSER");
+				out.flush();
+				return;
+			}
+
+			// adicionar user1 com permissão s em hm → OK
+
+			String houseFilePath = "src/sperta/data/houses/" + hm + ".txt";
+			File houseFile = new File(houseFilePath);
+
+			// Ler todas as linhas do ficheiro
+			java.util.List<String> lines = new java.util.ArrayList<>();
+			try (BufferedReader reader = new BufferedReader(new FileReader(houseFile))) {
+				String line;
+				while ((line = reader.readLine()) != null) lines.add(line);
+			}
+
+			// Procurar linha existente do user1 em [permissions] e actualizar ou inserir
+			boolean inPermissions = false;
+			boolean userFound = false;
+			for (int i = 0; i < lines.size(); i++) {
+				String line = lines.get(i);
+				if (line.trim().equals("[permissions]")) { inPermissions = true; continue; }
+				if (line.trim().equals("[devices]")) break;
+				if (!inPermissions || line.trim().isEmpty()) continue;
+				String[] parts = line.split("\\|", 2);
+				if (parts.length == 2 && parts[0].equals(user1)) {
+					// Já tem permissões: adicionar a nova secção se não existir
+					if (!parts[1].equals("all") && !s.equals("all")) {
+						java.util.Set<String> secs = new java.util.LinkedHashSet<>(
+								java.util.Arrays.asList(parts[1].split(",")));
+						secs.add(s);
+						lines.set(i, user1 + "|" + String.join(",", secs));
+					} else {
+						lines.set(i, user1 + "|all");
+					}
+					userFound = true;
+					break;
+				}
+			}
+
+			if (!userFound) {
+				// Inserir nova linha antes de [devices]
+				int devicesIdx = lines.indexOf("[devices]");
+				if (devicesIdx == -1) devicesIdx = lines.size();
+				lines.add(devicesIdx, user1 + "|" + s);
+			}
+
+			// Reescrever o ficheiro
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter(houseFile, false))) {
+				for (String line : lines) {
+					writer.write(line);
+					writer.newLine();
+				}
+			}
+
+			out.writeObject("OK");
+			out.flush();
+		}
 	}
 
 	private static void handleRD(String hm, String s,
@@ -322,7 +392,7 @@ public class SpertaServer {
 			socket = inSoc;
 			System.out.println("thread do server para cada cliente");
 		}
- 
+
 		public void run(){
 			try {
 				ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
@@ -386,7 +456,7 @@ public class SpertaServer {
 
 				outStream.close();
 				inStream.close();
- 			
+
 				socket.close();
 
 			} catch (IOException e) {
