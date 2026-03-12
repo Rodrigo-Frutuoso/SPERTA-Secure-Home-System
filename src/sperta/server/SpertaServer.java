@@ -82,7 +82,6 @@ public class SpertaServer {
 		return -1;
 	}
 
-	// Autentica user existente ou regista novo user
 	// Retorna: "OK-USER", "OK-NEW-USER" ou "WRONG-PWD"
 	private static String authenticateOrRegister(String user, String passwd) {
 		if (user == null || passwd == null || user.isEmpty() || passwd.isEmpty()) {
@@ -131,7 +130,6 @@ public class SpertaServer {
 
 	// ─── Handlers de comandos (servidor) ───────────────────────────────────────
 
-	// ...existing code...
 	private static void handleCreate(String hm, String owner, ObjectOutputStream out)
 			throws IOException {
 		synchronized (fileLock) {
@@ -350,26 +348,47 @@ public class SpertaServer {
 
 	private static void handleRT(String hm, String requester, ObjectOutputStream out)
 			throws IOException {
-		// TODO: verificar se hm existe (senão → NOHM)
-		//       verificar permissões (senão → NOPERM)
-		//       ler ficheiro de estados dos dispositivos de hm
-		//       se vazio → NODATA; senão → OK + long tamanho + bytes
+		if (!houseExists(hm)) { out.writeObject("NOHM"); out.flush(); return; }
+		if (!hasMembership(hm, requester)) { out.writeObject("NOPERM"); out.flush(); return; }
+
+		File statesFile = new File(STATES_DIR + hm + ".txt");
+		if (!statesFile.exists() || statesFile.length() == 0) {
+			out.writeObject("NODATA"); out.flush(); return;
+		}
+
+		byte[] data = java.nio.file.Files.readAllBytes(statesFile.toPath());
+		out.writeObject("OK");
+		out.writeLong(data.length);
+		out.write(data);
+		out.flush();
 	}
 
 	private static void handleRH(String hm, String d,
 			String requester, ObjectOutputStream out) throws IOException {
-		// TODO: verificar se hm existe (senão → NOHM)
-		//       verificar se d existe em hm (senão → NOD)
-		//       verificar permissões (senão → NOPERM)
-		//       ler LOGS_DIR/<hm>/<d>.csv
-		//       se vazio/inexistente → NODATA; senão → OK + long tamanho + bytes
+		if (!houseExists(hm)) { out.writeObject("NOHM"); out.flush(); return; }
+		if (!deviceExists(hm, d)) { out.writeObject("NOD"); out.flush(); return; }
+
+		String section = getDeviceSection(hm, d);
+		if (section == null || !hasPermission(hm, requester, section)) {
+			out.writeObject("NOPERM"); out.flush(); return;
+		}
+
+		File logFile = new File(LOGS_DIR + hm + "/" + d + ".csv");
+		if (!logFile.exists() || logFile.length() == 0) {
+			out.writeObject("NODATA"); out.flush(); return;
+		}
+
+		byte[] data = java.nio.file.Files.readAllBytes(logFile.toPath());
+		out.writeObject("OK");
+		out.writeLong(data.length);
+		out.write(data);
+		out.flush();
 	}
 
-	// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-	// ...existing code...
+	// ─── Helpers ───
 
 	private static boolean houseExists(String hm) {
+		if (!new File(HOUSES_FILE).exists()) return false;
 		synchronized (fileLock) {
 			try (BufferedReader reader = new BufferedReader(new FileReader(HOUSES_FILE))) {
 				String line;
@@ -386,6 +405,7 @@ public class SpertaServer {
 	}
 
 	private static boolean isOwner(String hm, String user) {
+		if (!new File(HOUSES_FILE).exists()) return false;
 		synchronized (fileLock) {
 			try (BufferedReader reader = new BufferedReader(new FileReader(HOUSES_FILE))) {
 				String line;
@@ -471,6 +491,25 @@ public class SpertaServer {
 				System.err.println("Erro ao ler secção do dispositivo: " + e.getMessage());
 			}
 			return null;
+		}
+	}
+
+	private static boolean hasMembership(String hm, String user) {
+		if (isOwner(hm, user)) return true;
+		synchronized (fileLock) {
+			String houseFilePath = "src/sperta/data/houses/" + hm + ".txt";
+			try (BufferedReader reader = new BufferedReader(new FileReader(houseFilePath))) {
+				String line;
+				boolean inPermissions = false;
+				while ((line = reader.readLine()) != null) {
+					if (line.trim().equals("[permissions]")) { inPermissions = true; continue; }
+					if (line.trim().equals("[devices]")) break;
+					if (!inPermissions || line.trim().isEmpty()) continue;
+					String[] parts = line.split("\\|", 2);
+					if (parts.length >= 1 && parts[0].equals(user)) return true;
+				}
+			} catch (IOException e) { /* ignore */ }
+			return false;
 		}
 	}
 

@@ -129,15 +129,14 @@ public class SpertaClient {
 		}
 	}
 
-	/** Devolve true se parts tem pelo menos 'min' tokens; caso contrário imprime uso e devolve false. */
 	private boolean checkArgs(String[] parts, int min, String usage) {
 		if (parts.length >= min) return true;
 		System.out.println("Uso: " + usage);
 		return false;
 	}
 
-	// ─── Handlers de comandos (cliente) ────────────────────────────────────────
-
+	// ─── Handlers de comandos (cliente) ───
+	
 	private void handleCreate(String hm, ObjectOutputStream out, ObjectInputStream in)
 			throws IOException, ClassNotFoundException {
 		out.writeObject("CREATE " + hm);
@@ -175,15 +174,41 @@ public class SpertaClient {
 
 	private void handleRT(String hm, ObjectOutputStream out, ObjectInputStream in)
 			throws IOException, ClassNotFoundException {
-		// TODO: enviar "RT <hm>", ler resposta OK + long tamanho + bytes,
-		//       guardar ficheiro localmente e imprimir resultado
+		out.writeObject("RT " + hm);
+		out.flush();
+		String response = (String) in.readObject();
+		if ("OK".equals(response)) {
+			long size = in.readLong();
+			byte[] data = new byte[(int) size];
+			in.readFully(data);
+			String fileName = hm + "_states.txt";
+			try (java.io.FileOutputStream fos = new java.io.FileOutputStream(fileName)) {
+				fos.write(data);
+			}
+			System.out.println("OK - estados guardados em " + fileName);
+		} else {
+			System.out.println(response);
+		}
 	}
 
 	private void handleRH(String hm, String d,
 			ObjectOutputStream out, ObjectInputStream in)
 			throws IOException, ClassNotFoundException {
-		// TODO: enviar "RH <hm> <d>", ler resposta OK + long tamanho + bytes,
-		//       guardar ficheiro CSV localmente e imprimir resultado
+		out.writeObject("RH " + hm + " " + d);
+		out.flush();
+		String response = (String) in.readObject();
+		if ("OK".equals(response)) {
+			long size = in.readLong();
+			byte[] data = new byte[(int) size];
+			in.readFully(data);
+			String fileName = hm + "_" + d + ".csv";
+			try (java.io.FileOutputStream fos = new java.io.FileOutputStream(fileName)) {
+				fos.write(data);
+			}
+			System.out.println("OK - histórico guardado em " + fileName);
+		} else {
+			System.out.println(response);
+		}
 	}
 
 	private long getClassSize() {
