@@ -91,6 +91,18 @@ public class SpertaServer {
 		synchronized (fileLock) {
 			Map<String, String> users = new HashMap<>();
 
+			// Garantir que o ficheiro e diretório existem
+			File userFile = new File(USER_FILE);
+			if (!userFile.exists()) {
+				userFile.getParentFile().mkdirs();
+				try {
+					userFile.createNewFile();
+				} catch (IOException e) {
+					System.err.println("Erro ao criar ficheiro de users: " + e.getMessage());
+					return "WRONG-PWD";
+				}
+			}
+
 			// Ler users existentes
 			try (BufferedReader reader = new BufferedReader(new FileReader(USER_FILE))) {
 				String line;
