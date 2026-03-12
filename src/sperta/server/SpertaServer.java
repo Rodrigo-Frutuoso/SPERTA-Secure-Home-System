@@ -281,11 +281,71 @@ public class SpertaServer {
 
 	private static void handleEC(String hm, String d, String intVal,
 			String requester, ObjectOutputStream out) throws IOException {
-		// TODO: verificar se hm existe (senão → NOHM)
-		//       verificar se d existe em hm (senão → NOD)
-		//       verificar permissões do requester (senão → NOPERM)
-		//       validar intVal ∈ [0..600] (senão → NOK)
-		//       gravar estado atual em STATES_DIR e entrada em LOGS_DIR/<hm>/<d>.csv → OK
+
+		// validar intVal ∈ [0..600] (senão → NOK)
+		int val;
+		try {
+			val = Integer.parseInt(intVal);
+			if (val < 0 || val > 600) { out.writeObject("NOK"); out.flush(); return; }
+		} catch (NumberFormatException e) {
+			out.writeObject("NOK"); out.flush(); return;
+		}
+
+		synchronized (fileLock) {
+			// verificar se hm existe (senão → NOHM)
+			if (!houseExists(hm)) { out.writeObject("NOHM"); out.flush(); return; }
+			// verificar se d existe em hm (senão → NOD)
+			if (!deviceExists(hm, d)) { out.writeObject("NOD"); out.flush(); return; }
+
+			// verificar permissões do requester (senão → NOPERM)
+			String section = getDeviceSection(hm, d);
+			if (section == null || !hasPermission(hm, requester, section)) {
+				out.writeObject("NOPERM"); out.flush(); return;
+			}
+
+			// gravar estado atual em STATES_DIR e entrada em LOGS_DIR/<hm>/<d>.csv → OK
+			String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+					.format(new java.util.Date());
+
+			// Atualizar estado atual: STATES_DIR/<hm>.txt
+			File statesDir = new File(STATES_DIR);
+			if (!statesDir.exists()) statesDir.mkdirs();
+			File statesFile = new File(STATES_DIR + hm + ".txt");
+
+			java.util.List<String> stateLines = new java.util.ArrayList<>();
+			if (statesFile.exists()) {
+				try (BufferedReader reader = new BufferedReader(new FileReader(statesFile))) {
+					String line;
+					while ((line = reader.readLine()) != null) stateLines.add(line);
+				}
+			}
+			boolean found = false;
+			for (int i = 0; i < stateLines.size(); i++) {
+				String[] parts = stateLines.get(i).split("\\|", 3);
+				if (parts.length >= 1 && parts[0].equals(d)) {
+					stateLines.set(i, d + "|" + val + "|" + timestamp);
+					found = true;
+					break;
+				}
+			}
+			if (!found) stateLines.add(d + "|" + val + "|" + timestamp);
+
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter(statesFile, false))) {
+				for (String line : stateLines) { writer.write(line); writer.newLine(); }
+			}
+
+			// Adicionar entrada no log: LOGS_DIR/<hm>/<d>.csv
+			File logsHouseDir = new File(LOGS_DIR + hm);
+			if (!logsHouseDir.exists()) logsHouseDir.mkdirs();
+			File logFile = new File(LOGS_DIR + hm + "/" + d + ".csv");
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter(logFile, true))) {
+				writer.write(d + "," + val + "," + timestamp);
+				writer.newLine();
+			}
+
+			out.writeObject("OK");
+			out.flush();
+		}
 	}
 
 	private static void handleRT(String hm, String requester, ObjectOutputStream out)
@@ -392,6 +452,25 @@ public class SpertaServer {
 				System.err.println("Erro ao ler dispositivos: " + e.getMessage());
 			}
 			return false;
+		}
+	}
+
+	private static String getDeviceSection(String hm, String device) {
+		synchronized (fileLock) {
+			String houseFilePath = "src/sperta/data/houses/" + hm + ".txt";
+			try (BufferedReader reader = new BufferedReader(new FileReader(houseFilePath))) {
+				String line;
+				boolean inDevices = false;
+				while ((line = reader.readLine()) != null) {
+					if (line.trim().equals("[devices]")) { inDevices = true; continue; }
+					if (!inDevices || line.trim().isEmpty()) continue;
+					String[] parts = line.split("\\|", 2);
+					if (parts.length == 2 && parts[0].equals(device)) return parts[1].trim();
+				}
+			} catch (IOException e) {
+				System.err.println("Erro ao ler secção do dispositivo: " + e.getMessage());
+			}
+			return null;
 		}
 	}
 
