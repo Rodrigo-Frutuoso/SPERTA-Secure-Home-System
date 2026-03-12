@@ -21,7 +21,7 @@ import java.util.Map;
 
 public class SpertaServer {
 
-	private static final String USER_FILE = "src/sperta/data/user.txt";
+	private static final String USER_FILE = "src/sperta/data/users.txt";
 	private static final String ATTESTATION_FILE = "src/sperta/server/attestation.txt";;
 	private static final String HOUSES_FILE = "src/sperta/data/all_houses.txt";
 	private static final String STATES_DIR  = "src/sperta/data/states/";
@@ -40,6 +40,18 @@ public class SpertaServer {
 			}
 		}
 		System.out.println("servidor: main "+ port);
+		// Garantir que os ficheiros e diretorios necessarios existem
+		try {
+			new File("src/sperta/data/houses").mkdirs();
+			new File("src/sperta/data/states").mkdirs();
+			new File("src/sperta/data/logs").mkdirs();
+			File housesFile = new File("src/sperta/data/all_houses.txt");
+			if (!housesFile.exists()) housesFile.createNewFile();
+			File usersFile = new File("src/sperta/data/users.txt");
+			if (!usersFile.exists()) usersFile.createNewFile();
+		} catch (IOException e) {
+			System.err.println("Erro ao inicializar estrutura de dados: " + e.getMessage());
+		}
 		SpertaServer server = new SpertaServer();
 		server.startServer(port);
 	}
@@ -147,6 +159,7 @@ public class SpertaServer {
 			}
 
 			File houseFile = new File("src/sperta/data/houses/" + hm + ".txt");
+			houseFile.getParentFile().mkdirs();
 			try (BufferedWriter writer = new BufferedWriter(new FileWriter(houseFile))) {
 				writer.write("[permissions]");
 				writer.newLine();
