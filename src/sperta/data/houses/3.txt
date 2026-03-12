@@ -1,3 +1,6 @@
 [permissions]
 
 [devices]
+P1|P
+P2|P
+M1|M

@@ -20,3 +20,5 @@ java -cp out SpertaServer 12345
 # run client (in another terminal)
 java -cp out SpertaClient localhost:12345 rodrigo frutas
 ####################################################################################
+
+valor para meter no attestation.txt -> wc -c out/SpertaClient.class

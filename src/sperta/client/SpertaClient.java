@@ -158,7 +158,10 @@ public class SpertaClient {
 	private void handleRD(String hm, String s,
 			ObjectOutputStream out, ObjectInputStream in)
 			throws IOException, ClassNotFoundException {
-		// TODO: enviar "RD <hm> <s>" ao servidor e imprimir a resposta
+		out.writeObject("RD " + hm + " " + s);
+		out.flush();
+		String response = (String) in.readObject();
+		System.out.println(response);
 	}
 
 	private void handleEC(String hm, String d, String intVal,

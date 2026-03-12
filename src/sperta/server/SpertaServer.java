@@ -243,9 +243,40 @@ public class SpertaServer {
 
 	private static void handleRD(String hm, String s,
 			String requester, ObjectOutputStream out) throws IOException {
-		// TODO: verificar se requester é owner de hm (senão → NOPERM)
-		//       verificar se hm existe (senão → NOHM)
-		//       incrementar contador da seção s em hm, registar dispositivo → OK
+		synchronized (fileLock) {
+			// verificar se hm existe (senão → NOHM)
+			if (!houseExists(hm)) { out.writeObject("NOHM"); out.flush(); return; }
+			// verificar se requester é owner de hm (senão → NOPERM)
+			if (!isOwner(hm, requester)) { out.writeObject("NOPERM"); out.flush(); return; }
+
+			// incrementar contador da seção s em hm, registar dispositivo → OK
+			File houseFile = new File("src/sperta/data/houses/" + hm + ".txt");
+			java.util.List<String> lines = new java.util.ArrayList<>();
+			try (BufferedReader reader = new BufferedReader(new FileReader(houseFile))) {
+				String line;
+				while ((line = reader.readLine()) != null) lines.add(line);
+			}
+
+			// Contar dispositivos já existentes na secção s para determinar o próximo número
+			int counter = 1;
+			boolean inDevices = false;
+			for (String line : lines) {
+				if (line.trim().equals("[devices]")) { inDevices = true; continue; }
+				if (!inDevices || line.trim().isEmpty()) continue;
+				String[] parts = line.split("\\|", 2);
+				if (parts.length == 2 && parts[1].trim().equals(s)) counter++;
+			}
+
+			String deviceName = s + counter;
+			lines.add(deviceName + "|" + s);
+
+			try (BufferedWriter writer = new BufferedWriter(new FileWriter(houseFile, false))) {
+				for (String line : lines) { writer.write(line); writer.newLine(); }
+			}
+
+			out.writeObject("OK");
+			out.flush();
+		}
 	}
 
 	private static void handleEC(String hm, String d, String intVal,
