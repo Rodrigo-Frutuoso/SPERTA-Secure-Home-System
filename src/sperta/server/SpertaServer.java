@@ -14,12 +14,20 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 //Servidor SpertaServer
 
 public class SpertaServer {
+	private static final String[] DEFAULT_SECTIONS = {"E", "G", "L", "M", "P", "S"};
 
 	private static final String USER_FILE = "src/sperta/data/users.txt";
 	private static final String ATTESTATION_FILE = "src/sperta/server/attestation.txt";;
@@ -154,7 +162,7 @@ public class SpertaServer {
 
 
 			try (BufferedWriter writer = new BufferedWriter(new FileWriter(HOUSES_FILE, true))) {
-				writer.write(hm + "|" + owner);
+				writer.write(hm + "|" + owner + "|" + defaultCountersSerialized());
 				writer.newLine();
 			}
 
@@ -177,6 +185,18 @@ public class SpertaServer {
 	private static void handleAdd(String user1, String hm, String s,
 			String requester, ObjectOutputStream out) throws IOException {
 		synchronized (fileLock) {
+			String normalizedSection;
+			if ("all".equalsIgnoreCase(s)) {
+				normalizedSection = "all";
+			} else {
+				normalizedSection = normalizeSection(s);
+				if (!isValidSection(normalizedSection)) {
+					out.writeObject("NOK");
+					out.flush();
+					return;
+				}
+			}
+
 			// verificar se hm existe (senão → NOHM)
 			if (!houseExists(hm)) {
 				out.writeObject("NOHM");
@@ -202,7 +222,7 @@ public class SpertaServer {
 			File houseFile = new File(houseFilePath);
 
 			// Ler todas as linhas do ficheiro
-			java.util.List<String> lines = new java.util.ArrayList<>();
+			List<String> lines = new ArrayList<>();
 			try (BufferedReader reader = new BufferedReader(new FileReader(houseFile))) {
 				String line;
 				while ((line = reader.readLine()) != null) lines.add(line);
@@ -219,10 +239,10 @@ public class SpertaServer {
 				String[] parts = line.split("\\|", 2);
 				if (parts.length == 2 && parts[0].equals(user1)) {
 					// Já tem permissões: adicionar a nova secção se não existir
-					if (!parts[1].equals("all") && !s.equals("all")) {
-						java.util.Set<String> secs = new java.util.LinkedHashSet<>(
-								java.util.Arrays.asList(parts[1].split(",")));
-						secs.add(s);
+					if (!parts[1].equals("all") && !normalizedSection.equals("all")) {
+						Set<String> secs = new LinkedHashSet<>(
+								Arrays.asList(parts[1].split(",")));
+						secs.add(normalizedSection);
 						lines.set(i, user1 + "|" + String.join(",", secs));
 					} else {
 						lines.set(i, user1 + "|all");
@@ -236,7 +256,7 @@ public class SpertaServer {
 				// Inserir nova linha antes de [devices]
 				int devicesIdx = lines.indexOf("[devices]");
 				if (devicesIdx == -1) devicesIdx = lines.size();
-				lines.add(devicesIdx, user1 + "|" + s);
+				lines.add(devicesIdx, user1 + "|" + normalizedSection);
 			}
 
 			// Reescrever o ficheiro
@@ -255,31 +275,29 @@ public class SpertaServer {
 	private static void handleRD(String hm, String s,
 			String requester, ObjectOutputStream out) throws IOException {
 		synchronized (fileLock) {
+			String normalizedSection = normalizeSection(s);
+			if (!isValidSection(normalizedSection)) {
+				out.writeObject("NOK");
+				out.flush();
+				return;
+			}
+
 			// verificar se hm existe (senão → NOHM)
 			if (!houseExists(hm)) { out.writeObject("NOHM"); out.flush(); return; }
 			// verificar se requester é owner de hm (senão → NOPERM)
 			if (!isOwner(hm, requester)) { out.writeObject("NOPERM"); out.flush(); return; }
 
-			// incrementar contador da seção s em hm, registar dispositivo → OK
+			// Incrementar contador persistente da secção e registar dispositivo.
 			File houseFile = new File("src/sperta/data/houses/" + hm + ".txt");
-			java.util.List<String> lines = new java.util.ArrayList<>();
+			List<String> lines = new ArrayList<>();
 			try (BufferedReader reader = new BufferedReader(new FileReader(houseFile))) {
 				String line;
 				while ((line = reader.readLine()) != null) lines.add(line);
 			}
 
-			// Contar dispositivos já existentes na secção s para determinar o próximo número
-			int counter = 1;
-			boolean inDevices = false;
-			for (String line : lines) {
-				if (line.trim().equals("[devices]")) { inDevices = true; continue; }
-				if (!inDevices || line.trim().isEmpty()) continue;
-				String[] parts = line.split("\\|", 2);
-				if (parts.length == 2 && parts[1].trim().equals(s)) counter++;
-			}
-
-			String deviceName = s + counter;
-			lines.add(deviceName + "|" + s);
+			int counter = nextDeviceCounterInHouseFile(hm, normalizedSection);
+			String deviceName = normalizedSection + counter;
+			lines.add(deviceName + "|" + normalizedSection);
 
 			try (BufferedWriter writer = new BufferedWriter(new FileWriter(houseFile, false))) {
 				for (String line : lines) { writer.write(line); writer.newLine(); }
@@ -316,14 +334,14 @@ public class SpertaServer {
 
 			// gravar estado atual em STATES_DIR e entrada em LOGS_DIR/<hm>/<d>.csv → OK
 			String timestamp = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
-					.format(new java.util.Date());
+					.format(new Date());
 
 			// Atualizar estado atual: STATES_DIR/<hm>.txt
 			File statesDir = new File(STATES_DIR);
 			if (!statesDir.exists()) statesDir.mkdirs();
 			File statesFile = new File(STATES_DIR + hm + ".txt");
 
-			java.util.List<String> stateLines = new java.util.ArrayList<>();
+			List<String> stateLines = new ArrayList<>();
 			if (statesFile.exists()) {
 				try (BufferedReader reader = new BufferedReader(new FileReader(statesFile))) {
 					String line;
@@ -369,7 +387,26 @@ public class SpertaServer {
 			out.writeObject("NODATA"); out.flush(); return;
 		}
 
-		byte[] data = java.nio.file.Files.readAllBytes(statesFile.toPath());
+		List<String> stateLines = java.nio.file.Files.readAllLines(statesFile.toPath());
+		StringBuilder filtered = new StringBuilder();
+		for (String line : stateLines) {
+			if (line == null || line.trim().isEmpty()) continue;
+			String[] parts = line.split("\\|", 3);
+			if (parts.length < 1) continue;
+			String device = parts[0].trim();
+			String section = getDeviceSection(hm, device);
+			if (section != null && hasPermission(hm, requester, section)) {
+				filtered.append(line).append("\n");
+			}
+		}
+
+		if (filtered.length() == 0) {
+			out.writeObject("NODATA");
+			out.flush();
+			return;
+		}
+
+		byte[] data = filtered.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
 		out.writeObject("OK");
 		out.writeLong(data.length);
 		out.write(data);
@@ -424,8 +461,8 @@ public class SpertaServer {
 				String line;
 				while ((line = reader.readLine()) != null) {
 					if (line.trim().isEmpty()) continue;
-					String[] parts = line.split("\\|", 2);
-					if (parts.length == 2 && parts[0].equals(hm) && parts[1].equals(user))
+					String[] parts = line.split("\\|", 3);
+					if (parts.length >= 2 && parts[0].equals(hm) && parts[1].equals(user))
 						return true;
 				}
 			} catch (IOException e) {
@@ -433,6 +470,93 @@ public class SpertaServer {
 			}
 			return false;
 		}
+	}
+
+	private static int nextDeviceCounterInHouseFile(String hm, String section) throws IOException {
+		File file = new File(HOUSES_FILE);
+		if (!file.exists()) file.createNewFile();
+
+		List<String> lines = new ArrayList<>();
+		try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+			String line;
+			while ((line = reader.readLine()) != null) lines.add(line);
+		}
+
+		int currentValue = 1;
+		boolean updated = false;
+
+		for (int i = 0; i < lines.size(); i++) {
+			String[] parts = lines.get(i).split("\\|", 3);
+			if (parts.length < 2 || !parts[0].equals(hm)) continue;
+
+			String owner = parts[1];
+			String countersRaw = parts.length == 3 ? parts[2] : "";
+			Map<String, Integer> counters = parseCounters(countersRaw);
+			currentValue = counters.getOrDefault(section, 1);
+			counters.put(section, currentValue + 1);
+			lines.set(i, hm + "|" + owner + "|" + serializeCounters(counters));
+			updated = true;
+			break;
+		}
+
+		if (!updated) {
+			throw new IOException("Casa não encontrada para atualizar contador: " + hm);
+		}
+
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(file, false))) {
+			for (String line : lines) {
+				writer.write(line);
+				writer.newLine();
+			}
+		}
+
+		return currentValue;
+	}
+
+	private static Map<String, Integer> parseCounters(String raw) {
+		Map<String, Integer> counters = new LinkedHashMap<>();
+		if (raw == null || raw.trim().isEmpty()) return counters;
+
+		String[] entries = raw.split(",");
+		for (String entry : entries) {
+			String[] kv = entry.split("=", 2);
+			if (kv.length != 2) continue;
+			try {
+				String section = normalizeSection(kv[0]);
+				if (!isValidSection(section)) continue;
+				counters.put(section, Integer.parseInt(kv[1].trim()));
+			} catch (NumberFormatException e) {
+				// ignorar valores inválidos no ficheiro
+			}
+		}
+		return counters;
+	}
+
+	private static String normalizeSection(String section) {
+		if (section == null) return "";
+		return section.trim().toUpperCase();
+	}
+
+	private static boolean isValidSection(String section) {
+		for (String allowed : DEFAULT_SECTIONS) {
+			if (allowed.equals(section)) return true;
+		}
+		return false;
+	}
+
+	private static String serializeCounters(Map<String, Integer> counters) {
+		StringBuilder sb = new StringBuilder();
+		for (Map.Entry<String, Integer> entry : counters.entrySet()) {
+			if (sb.length() > 0) sb.append(",");
+			sb.append(entry.getKey()).append("=").append(entry.getValue());
+		}
+		return sb.toString();
+	}
+
+	private static String defaultCountersSerialized() {
+		Map<String, Integer> counters = new LinkedHashMap<>();
+		for (String section : DEFAULT_SECTIONS) counters.put(section, 1);
+		return serializeCounters(counters);
 	}
 
 	private static boolean hasPermission(String hm, String user, String s) {
