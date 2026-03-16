@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.net.Socket;
 import java.util.Scanner;
 
@@ -181,8 +183,10 @@ public class SpertaClient {
 			long size = in.readLong();
 			byte[] data = new byte[(int) size];
 			in.readFully(data);
-			String fileName = hm + "_states.txt";
-			try (java.io.FileOutputStream fos = new java.io.FileOutputStream(fileName)) {
+			File houseLogsDir = new File("src/sperta/data/logs", hm);
+			houseLogsDir.mkdirs();
+			String fileName = new File(houseLogsDir, hm + "_states.txt").getPath();
+			try (FileOutputStream fos = new FileOutputStream(fileName)) {
 				fos.write(data);
 			}
 			System.out.println("OK - estados guardados em " + fileName);
@@ -201,8 +205,10 @@ public class SpertaClient {
 			long size = in.readLong();
 			byte[] data = new byte[(int) size];
 			in.readFully(data);
-			String fileName = hm + "_" + d + ".csv";
-			try (java.io.FileOutputStream fos = new java.io.FileOutputStream(fileName)) {
+			File houseLogsDir = new File("src/sperta/data/logs", hm);
+			houseLogsDir.mkdirs();
+			String fileName = new File(houseLogsDir, d + ".csv").getPath();
+			try (FileOutputStream fos = new FileOutputStream(fileName)) {
 				fos.write(data);
 			}
 			System.out.println("OK - histórico guardado em " + fileName);
