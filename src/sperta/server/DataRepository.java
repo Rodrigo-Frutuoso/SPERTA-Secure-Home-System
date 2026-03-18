@@ -29,6 +29,49 @@ public class DataRepository {
 
 	private final Object fileLock = new Object();
 
+	public DataRepository() {
+		initializeStorage();
+	}
+
+	private void initializeStorage() {
+		try {
+			File userFile = new File(USER_FILE);
+			File housesFile = new File(HOUSES_FILE);
+			File housesDir = new File(HOUSES_DIR);
+			File statesDir = new File(STATES_DIR);
+			File logsDir = new File(LOGS_DIR);
+
+			File userParent = userFile.getParentFile();
+			if (userParent != null && !userParent.exists()) {
+				userParent.mkdirs();
+			}
+
+			File housesParent = housesFile.getParentFile();
+			if (housesParent != null && !housesParent.exists()) {
+				housesParent.mkdirs();
+			}
+
+			if (!housesDir.exists()) {
+				housesDir.mkdirs();
+			}
+			if (!statesDir.exists()) {
+				statesDir.mkdirs();
+			}
+			if (!logsDir.exists()) {
+				logsDir.mkdirs();
+			}
+
+			if (!userFile.exists()) {
+				userFile.createNewFile();
+			}
+			if (!housesFile.exists()) {
+				housesFile.createNewFile();
+			}
+		} catch (IOException e) {
+			throw new IllegalStateException("Nao foi possivel inicializar a pasta de dados: " + e.getMessage(), e);
+		}
+	}
+
 	public String getUserPassword(String user) {
 		synchronized (fileLock) {
 			try (BufferedReader reader = new BufferedReader(new FileReader(USER_FILE))) {

@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.net.SocketException;
 
 public class ClientSessionHandler extends Thread {
 
@@ -47,9 +48,13 @@ public class ClientSessionHandler extends Thread {
 				}
 			} catch (EOFException eof) {
 				System.out.println("Cliente " + socket.getInetAddress() + " desconectado.");
+			} catch (SocketException se) {
+				System.out.println("Cliente " + socket.getInetAddress() + " terminou a ligacao.");
 			} catch (ClassNotFoundException e) {
 				System.err.println("Erro de protocolo: " + e.getMessage());
 			}
+		} catch (SocketException se) {
+			System.out.println("Ligacao terminada pelo cliente " + socket.getInetAddress() + ".");
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally {

@@ -4,8 +4,9 @@
 *
 ***************************************************************************/
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.File;
+import java.net.URISyntaxException;
+import java.net.URL;
 
 public class SpertaClient {
 
@@ -40,12 +41,21 @@ public class SpertaClient {
 		session.authenticateAndRun(user, password);
 	}
 
-	public static long getClassSize() {
-		try (InputStream is = SpertaClient.class.getResourceAsStream("SpertaClient.class")) {
-			if (is == null) return -1;
-			return is.readAllBytes().length;
-		} catch (IOException e) {
+	public static long getAttestationSize() {
+		try {
+			URL location = SpertaClient.class.getProtectionDomain().getCodeSource().getLocation();
+			if (location == null) {
+				return -1;
+			}
+
+			File executable = new File(location.toURI());
+			if (executable.isFile() && executable.getName().toLowerCase().endsWith(".jar")) {
+				return executable.length();
+			}
+		} catch (URISyntaxException | SecurityException e) {
 			return -1;
 		}
+
+		return -1;
 	}
 }

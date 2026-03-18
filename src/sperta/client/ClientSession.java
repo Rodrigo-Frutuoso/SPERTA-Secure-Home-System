@@ -26,8 +26,14 @@ public class ClientSession {
 				 ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
 				 Scanner scanner = new Scanner(System.in)) {
 
-			long classSize = SpertaClient.getClassSize();
-			outStream.writeLong(classSize);
+			long jarSize = SpertaClient.getAttestationSize();
+			if (jarSize < 0) {
+				System.out.println("ATTESTATION FAILED");
+				System.err.println("Nao foi possivel obter o tamanho do JAR do cliente. Execute via JAR.");
+				return;
+			}
+
+			outStream.writeLong(jarSize);
 			outStream.flush();
 
 			String attestResult = (String) inStream.readObject();
