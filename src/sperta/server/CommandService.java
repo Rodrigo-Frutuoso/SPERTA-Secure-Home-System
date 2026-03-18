@@ -68,6 +68,13 @@ public class CommandService {
 
 	private void handleAdd(String user1, String hm, String s, String requester, ObjectOutputStream out)
 			throws IOException {
+		String section = s == null ? "" : s.trim().toUpperCase();
+		if (!"ALL".equals(section) && !repository.isValidSection(section)) {
+			out.writeObject("NOK");
+			out.flush();
+			return;
+		}
+
 		if (!repository.houseExists(hm)) {
 			out.writeObject("NOHM");
 			out.flush();
@@ -84,12 +91,19 @@ public class CommandService {
 			return;
 		}
 
-		repository.addPermission(hm, user1, s);
+		repository.addPermission(hm, user1, "ALL".equals(section) ? "all" : section);
 		out.writeObject("OK");
 		out.flush();
 	}
 
 	private void handleRD(String hm, String s, String requester, ObjectOutputStream out) throws IOException {
+		String section = s == null ? "" : s.trim().toUpperCase();
+		if (!repository.isValidSection(section)) {
+			out.writeObject("NOK");
+			out.flush();
+			return;
+		}
+
 		if (!repository.houseExists(hm)) {
 			out.writeObject("NOHM");
 			out.flush();
@@ -101,13 +115,19 @@ public class CommandService {
 			return;
 		}
 
-		repository.registerDevice(hm, s);
+		repository.registerDevice(hm, section);
 		out.writeObject("OK");
 		out.flush();
 	}
 
 	private void handleEC(String hm, String d, String intVal, String requester, ObjectOutputStream out)
 			throws IOException {
+		String device = d == null ? "" : d.trim().toUpperCase();
+		if (device.isEmpty()) {
+			out.writeObject("NOD");
+			out.flush();
+			return;
+		}
 		int val;
 		try {
 			val = Integer.parseInt(intVal);
@@ -127,20 +147,20 @@ public class CommandService {
 			out.flush();
 			return;
 		}
-		if (!repository.deviceExists(hm, d)) {
+		if (!repository.deviceExists(hm, device)) {
 			out.writeObject("NOD");
 			out.flush();
 			return;
 		}
 
-		String section = repository.getDeviceSection(hm, d);
+		String section = repository.getDeviceSection(hm, device);
 		if (section == null || !repository.hasPermission(hm, requester, section)) {
 			out.writeObject("NOPERM");
 			out.flush();
 			return;
 		}
 
-		repository.updateStateAndLog(hm, d, val);
+		repository.updateStateAndLog(hm, device, val);
 		out.writeObject("OK");
 		out.flush();
 	}
@@ -171,25 +191,32 @@ public class CommandService {
 	}
 
 	private void handleRH(String hm, String d, String requester, ObjectOutputStream out) throws IOException {
-		if (!repository.houseExists(hm)) {
-			out.writeObject("NOHM");
-			out.flush();
-			return;
-		}
-		if (!repository.deviceExists(hm, d)) {
+		String device = d == null ? "" : d.trim().toUpperCase();
+		if (device.isEmpty()) {
 			out.writeObject("NOD");
 			out.flush();
 			return;
 		}
 
-		String section = repository.getDeviceSection(hm, d);
+		if (!repository.houseExists(hm)) {
+			out.writeObject("NOHM");
+			out.flush();
+			return;
+		}
+		if (!repository.deviceExists(hm, device)) {
+			out.writeObject("NOD");
+			out.flush();
+			return;
+		}
+
+		String section = repository.getDeviceSection(hm, device);
 		if (section == null || !repository.hasPermission(hm, requester, section)) {
 			out.writeObject("NOPERM");
 			out.flush();
 			return;
 		}
 
-		byte[] data = repository.readDeviceLog(hm, d);
+		byte[] data = repository.readDeviceLog(hm, device);
 		if (data == null || data.length == 0) {
 			out.writeObject("NODATA");
 			out.flush();

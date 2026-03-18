@@ -15,8 +15,10 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class DataRepository {
@@ -26,6 +28,7 @@ public class DataRepository {
 	private static final String HOUSES_DIR = "src/sperta/data/houses/";
 	private static final String STATES_DIR = "src/sperta/data/states/";
 	private static final String LOGS_DIR = "src/sperta/data/logs/";
+	private static final String[] DEFAULT_SECTIONS = {"E", "G", "L", "M", "P", "S"};
 
 	private final Object fileLock = new Object();
 
@@ -120,7 +123,7 @@ public class DataRepository {
 					if (line.trim().isEmpty()) {
 						continue;
 					}
-					String[] parts = line.split("\\|", 2);
+					String[] parts = line.split("\\|", 3);
 					if (parts.length >= 1 && parts[0].equals(hm)) {
 						return true;
 					}
@@ -143,8 +146,8 @@ public class DataRepository {
 					if (line.trim().isEmpty()) {
 						continue;
 					}
-					String[] parts = line.split("\\|", 2);
-					if (parts.length == 2 && parts[0].equals(hm) && parts[1].equals(user)) {
+					String[] parts = line.split("\\|", 3);
+					if (parts.length >= 2 && parts[0].equals(hm) && parts[1].equals(user)) {
 						return true;
 					}
 				}
@@ -158,7 +161,7 @@ public class DataRepository {
 	public void createHouse(String hm, String owner) throws IOException {
 		synchronized (fileLock) {
 			try (BufferedWriter writer = new BufferedWriter(new FileWriter(HOUSES_FILE, true))) {
-				writer.write(hm + "|" + owner);
+				writer.write(hm + "|" + owner + "|" + defaultCountersSerialized());
 				writer.newLine();
 			}
 
@@ -220,29 +223,62 @@ public class DataRepository {
 
 	public void registerDevice(String hm, String section) throws IOException {
 		synchronized (fileLock) {
-			File houseFile = new File(HOUSES_DIR + hm + ".txt");
-			List<String> lines = readAllLines(houseFile);
+			String normalizedSection = section == null ? "" : section.trim().toUpperCase();
+			if (!isValidSection(normalizedSection)) {
+				throw new IOException("Secao invalida: " + section);
+			}
 
-			int counter = 1;
-			boolean inDevices = false;
-			for (String line : lines) {
-				if (line.trim().equals("[devices]")) {
-					inDevices = true;
+			File housesFile = new File(HOUSES_FILE);
+			List<String> houseLines = readAllLines(housesFile);
+			int houseLineIndex = -1;
+			String owner = null;
+			Map<String, Integer> counters = null;
+
+			for (int i = 0; i < houseLines.size(); i++) {
+				String line = houseLines.get(i);
+				if (line.trim().isEmpty()) {
 					continue;
 				}
-				if (!inDevices || line.trim().isEmpty()) {
-					continue;
-				}
-				String[] parts = line.split("\\|", 2);
-				if (parts.length == 2 && parts[1].trim().equals(section)) {
-					counter++;
+
+				String[] parts = line.split("\\|", 3);
+				if (parts.length >= 2 && parts[0].equals(hm)) {
+					houseLineIndex = i;
+					owner = parts[1];
+					String serialized = parts.length == 3 ? parts[2] : defaultCountersSerialized();
+					counters = parseCounters(serialized);
+					break;
 				}
 			}
 
-			String deviceName = section + counter;
-			lines.add(deviceName + "|" + section);
+			if (houseLineIndex == -1 || owner == null || counters == null) {
+				throw new IOException("Casa nao encontrada: " + hm);
+			}
+
+			int counter = counters.getOrDefault(normalizedSection, 1);
+			String deviceName = normalizedSection + counter;
+			counters.put(normalizedSection, counter + 1);
+
+			houseLines.set(houseLineIndex, hm + "|" + owner + "|" + countersToSerialized(counters));
+			writeAllLines(housesFile, houseLines);
+
+			File houseFile = new File(HOUSES_DIR + hm + ".txt");
+			List<String> lines = readAllLines(houseFile);
+			lines.add(deviceName + "|" + normalizedSection);
 			writeAllLines(houseFile, lines);
 		}
+	}
+
+	public boolean isValidSection(String section) {
+		if (section == null) {
+			return false;
+		}
+		String normalized = section.trim().toUpperCase();
+		for (String allowed : DEFAULT_SECTIONS) {
+			if (allowed.equals(normalized)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public boolean deviceExists(String hm, String device) {
@@ -443,5 +479,57 @@ public class DataRepository {
 				writer.newLine();
 			}
 		}
+	}
+
+	private String defaultCountersSerialized() {
+		Map<String, Integer> counters = new LinkedHashMap<>();
+		for (String section : DEFAULT_SECTIONS) {
+			counters.put(section, 1);
+		}
+		return countersToSerialized(counters);
+	}
+
+	private Map<String, Integer> parseCounters(String serialized) {
+		Map<String, Integer> counters = new LinkedHashMap<>();
+		for (String section : DEFAULT_SECTIONS) {
+			counters.put(section, 1);
+		}
+
+		if (serialized == null || serialized.trim().isEmpty()) {
+			return counters;
+		}
+
+		String[] parts = serialized.split(",");
+		for (String part : parts) {
+			String[] kv = part.split("=", 2);
+			if (kv.length != 2) {
+				continue;
+			}
+
+			String section = kv[0].trim().toUpperCase();
+			if (!isValidSection(section)) {
+				continue;
+			}
+
+			try {
+				int value = Integer.parseInt(kv[1].trim());
+				if (value < 1) {
+					value = 1;
+				}
+				counters.put(section, value);
+			} catch (NumberFormatException ignored) {
+			}
+		}
+
+		return counters;
+	}
+
+	private String countersToSerialized(Map<String, Integer> counters) {
+		List<String> entries = new ArrayList<>();
+		for (String section : DEFAULT_SECTIONS) {
+			int value = counters.getOrDefault(section, 1);
+			entries.add(section + "=" + value);
+		}
+		return String.join(",", entries);
 	}
 }

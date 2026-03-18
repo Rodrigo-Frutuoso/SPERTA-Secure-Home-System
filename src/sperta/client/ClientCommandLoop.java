@@ -8,9 +8,12 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.File;
 import java.util.Scanner;
 
 public class ClientCommandLoop {
+
+	private static final String DOWNLOAD_DIR = "logs";
 
 	private final ObjectOutputStream out;
 	private final ObjectInputStream in;
@@ -126,10 +129,11 @@ public class ClientCommandLoop {
 			byte[] data = new byte[(int) size];
 			in.readFully(data);
 			String fileName = hm + "_states.txt";
-			try (FileOutputStream fos = new FileOutputStream(fileName)) {
+			String outputPath = resolveOutputPath(fileName);
+			try (FileOutputStream fos = new FileOutputStream(outputPath)) {
 				fos.write(data);
 			}
-			System.out.println("OK - estados guardados em " + fileName);
+			System.out.println("OK - estados guardados em " + outputPath);
 		} else {
 			System.out.println(response);
 		}
@@ -144,12 +148,21 @@ public class ClientCommandLoop {
 			byte[] data = new byte[(int) size];
 			in.readFully(data);
 			String fileName = hm + "_" + d + ".csv";
-			try (FileOutputStream fos = new FileOutputStream(fileName)) {
+			String outputPath = resolveOutputPath(fileName);
+			try (FileOutputStream fos = new FileOutputStream(outputPath)) {
 				fos.write(data);
 			}
-			System.out.println("OK - histórico guardado em " + fileName);
+			System.out.println("OK - histórico guardado em " + outputPath);
 		} else {
 			System.out.println(response);
 		}
+	}
+
+	private String resolveOutputPath(String fileName) {
+		File dir = new File(DOWNLOAD_DIR);
+		if (!dir.exists()) {
+			dir.mkdirs();
+		}
+		return new File(dir, fileName).getPath();
 	}
 }
