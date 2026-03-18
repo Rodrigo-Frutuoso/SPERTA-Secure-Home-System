@@ -30,7 +30,7 @@ public class SpertaClient {
 			try {
 				port = Integer.parseInt(parts[1]);
 			} catch (NumberFormatException e) {
-				System.err.println("Porto inválido: " + parts[1] + ". A usar porto por omissão: " + DEFAULT_PORT);
+				System.err.println("Porto invalido: " + parts[1] + ". A usar porto por omissao: " + DEFAULT_PORT);
 			}
 		} else {
 			host = serverAddress;
