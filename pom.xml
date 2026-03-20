@@ -87,6 +87,7 @@
                 <artifactId>maven-clean-plugin</artifactId>
                 <version>3.4.0</version>
                 <configuration>
+                    <failOnError>false</failOnError>
                     <filesets>
                         <fileset>
                             <directory>${project.basedir}/out-client</directory>
