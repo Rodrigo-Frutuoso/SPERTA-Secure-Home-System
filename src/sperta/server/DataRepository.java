@@ -23,11 +23,12 @@ import java.util.Set;
 
 public class DataRepository {
 
-	private static final String USER_FILE = "src/sperta/data/user.txt";
-	private static final String HOUSES_FILE = "src/sperta/data/all_houses.txt";
-	private static final String HOUSES_DIR = "src/sperta/data/houses/";
-	private static final String STATES_DIR = "src/sperta/data/states/";
-	private static final String LOGS_DIR = "src/sperta/data/logs/";
+	private static final String SERVER_DATA_DIR = "src/sperta/data/server/";
+	private static final String USER_FILE = SERVER_DATA_DIR + "user.txt";
+	private static final String HOUSES_FILE = SERVER_DATA_DIR + "all_houses.txt";
+	private static final String HOUSES_DIR = SERVER_DATA_DIR + "houses/";
+	private static final String STATES_DIR = SERVER_DATA_DIR + "states/";
+	private static final String LOGS_DIR = SERVER_DATA_DIR + "logs/";
 	private static final String[] DEFAULT_SECTIONS = {"E", "G", "L", "M", "P", "S"};
 
 	private final Object fileLock = new Object();

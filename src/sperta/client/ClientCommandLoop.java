@@ -13,7 +13,7 @@ import java.util.Scanner;
 
 public class ClientCommandLoop {
 
-	private static final String DOWNLOAD_DIR = "src/sperta/data/logs";
+	private static final String DOWNLOAD_DIR = "src/sperta/data/client/downloads";
 
 	private final ObjectOutputStream out;
 	private final ObjectInputStream in;

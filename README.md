@@ -82,17 +82,17 @@ java -jar dist/SpertaClient.jar localhost:12345 rodrigo frutas
 │   │   └── SpertaClient.java         # Ponto de entrada do cliente
 │   │
 │   ├── data/                         # Gerado em runtime
-│   │   ├── houses/
-│   │   │   └── <casa>.txt            # Permissões e dispositivos por casa
-│   │   ├── logs/
-│   │   │   ├── <casa>/
-│   │   │   │   └── <dispositivo>.csv # Histórico de comandos com timestamp
-│   │   │   ├── <casa>_states.txt     # Resultado do comando RT
-│   │   │   └── <casa>_<disp>.csv     # Resultado do comando RH
-│   │   ├── states/
-│   │   │   └── <casa>.txt            # Último estado de cada dispositivo
-│   │   ├── all_houses.txt            # Casas: casa|owner|contadores
-│   │   └── user.txt                  # Utilizadores: user:password
+│   │   ├── server/                   # Persistência interna do servidor
+│   │   │   ├── houses/
+│   │   │   │   └── <casa>.txt        # Permissões e dispositivos por casa
+│   │   │   ├── logs/
+│   │   │   │   └── <casa>/<disp>.csv # Histórico por dispositivo
+│   │   │   ├── states/
+│   │   │   │   └── <casa>.txt        # Último estado de cada dispositivo
+│   │   │   ├── all_houses.txt        # Casas: casa|owner|contadores
+│   │   │   └── user.txt              # Utilizadores: user:password
+│   │   └── client/
+│   │       └── downloads/            # Ficheiros recebidos nos comandos RT/RH
 │   │
 │   └── server/
 │       ├── AuthService.java          # Atestação e autenticação
