@@ -132,7 +132,7 @@ Remove os seguintes artefactos gerados:
 - `out-client/`
 - `out-server/`
 - `dist/`
-- `src/sperta/data/` (inclui `server/` e `client/downloads/`)
+- `src/sperta/data/`
 - `src/sperta/server/attestation.txt`
 
 ---
