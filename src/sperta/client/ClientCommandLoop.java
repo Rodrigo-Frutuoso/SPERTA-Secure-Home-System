@@ -13,7 +13,7 @@ import java.util.Scanner;
 
 public class ClientCommandLoop {
 
-	private static final String DOWNLOAD_DIR = "logs";
+	private static final String DOWNLOAD_DIR = "src/sperta/data/logs";
 
 	private final ObjectOutputStream out;
 	private final ObjectInputStream in;
@@ -133,7 +133,7 @@ public class ClientCommandLoop {
 			try (FileOutputStream fos = new FileOutputStream(outputPath)) {
 				fos.write(data);
 			}
-			System.out.println("OK - estados guardados em " + outputPath);
+			System.out.println("OK, " + size + " (long), seguido de " + size + " bytes de dados. Estados guardados em " + outputPath);
 		} else {
 			System.out.println(response);
 		}
@@ -152,7 +152,7 @@ public class ClientCommandLoop {
 			try (FileOutputStream fos = new FileOutputStream(outputPath)) {
 				fos.write(data);
 			}
-			System.out.println("OK - histórico guardado em " + outputPath);
+			System.out.println("OK, " + size + " (long), seguido de " + size + " bytes de dados. Historico guardado em " + outputPath);
 		} else {
 			System.out.println(response);
 		}
