@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>pt.segc</groupId>
+    <artifactId>sperta</artifactId>
+    <version>1.0.0</version>
+    <name>Sperta</name>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.release>21</maven.compiler.release>
+        <client.main.class>SpertaClient</client.main.class>
+        <server.main.class>SpertaServer</server.main.class>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>build-client-and-server-jars</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <mkdir dir="${project.basedir}/out-client"/>
+                                <mkdir dir="${project.basedir}/out-server"/>
+                                <mkdir dir="${project.basedir}/dist"/>
+
+                                <javac srcdir="${project.basedir}/src/sperta/client"
+                                       destdir="${project.basedir}/out-client"
+                                       includeantruntime="false"
+                                        release="${maven.compiler.release}">
+                                    <include name="**/*.java"/>
+                                </javac>
+
+                                <javac srcdir="${project.basedir}/src/sperta/server"
+                                       destdir="${project.basedir}/out-server"
+                                       includeantruntime="false"
+                                        release="${maven.compiler.release}">
+                                    <include name="**/*.java"/>
+                                </javac>
+
+                                <jar destfile="${project.basedir}/dist/SpertaClient.jar"
+                                     basedir="${project.basedir}/out-client"
+                                     includes="**/*.class">
+                                    <manifest>
+                                        <attribute name="Main-Class" value="${client.main.class}"/>
+                                    </manifest>
+                                </jar>
+
+                                <jar destfile="${project.basedir}/dist/SpertaServer.jar"
+                                     basedir="${project.basedir}/out-server"
+                                     includes="**/*.class">
+                                    <manifest>
+                                        <attribute name="Main-Class" value="${server.main.class}"/>
+                                    </manifest>
+                                </jar>
+
+                                <length file="${project.basedir}/dist/SpertaClient.jar" property="client.jar.size"/>
+                                <echo file="${project.basedir}/src/sperta/server/attestation.txt">SpertaClient.jar:${client.jar.size}</echo>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.5.0</version>
+                <configuration>
+                    <skipIfEmpty>true</skipIfEmpty>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.4.0</version>
+                <configuration>
+                    <filesets>
+                        <fileset>
+                            <directory>${project.basedir}/out-client</directory>
+                        </fileset>
+                        <fileset>
+                            <directory>${project.basedir}/out-server</directory>
+                        </fileset>
+                        <fileset>
+                            <directory>${project.basedir}/dist</directory>
+                        </fileset>
+                        <fileset>
+                            <directory>${project.basedir}/src/sperta/data</directory>
+                        </fileset>
+                        <fileset>
+                            <directory>${project.basedir}/src/sperta/server</directory>
+                            <includes>
+                                <include>attestation.txt</include>
+                            </includes>
+                        </fileset>
+                    </filesets>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>
