@@ -58,6 +58,12 @@ public class ClientSession {
 				}
 			} while ("WRONG-PWD".equals(authResult));
 
+			if ("USER-ALREADY-CONNECTED".equals(authResult)) {
+				System.out.println("USER-ALREADY-CONNECTED");
+				System.out.println("Este utilizador ja tem uma sessao ativa. Tente novamente mais tarde.");
+				return;
+			}
+
 			if ("OK-NEW-USER".equals(authResult)) {
 				System.out.println("OK-NEW-USER");
 			} else {

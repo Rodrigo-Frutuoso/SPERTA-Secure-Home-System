@@ -26,6 +26,7 @@ public class ClientSessionHandler extends Thread {
 
 	@Override
 	public void run() {
+		String user = null;
 		try (ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
 				 ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream())) {
 
@@ -33,7 +34,7 @@ public class ClientSessionHandler extends Thread {
 				return;
 			}
 
-			String user = authService.authenticate(inStream, outStream);
+			user = authService.authenticate(inStream, outStream);
 			if (user == null) {
 				return;
 			}
@@ -58,6 +59,7 @@ public class ClientSessionHandler extends Thread {
 		} catch (IOException e) {
 			e.printStackTrace();
 		} finally {
+			authService.unregisterActiveUser(user);
 			try {
 				socket.close();
 			} catch (IOException ignored) {

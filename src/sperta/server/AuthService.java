@@ -9,14 +9,18 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.HashSet;
+import java.util.Set;
 
 public class AuthService {
 
 	private static final String ATTESTATION_FILE = "src/sperta/server/attestation.txt";
 	private final DataRepository repository;
+	private final Set<String> activeUsers;
 
 	public AuthService(DataRepository repository) {
 		this.repository = repository;
+		this.activeUsers = new HashSet<>();
 	}
 
 	public boolean performAttestation(ObjectInputStream inStream, ObjectOutputStream outStream) throws IOException {
@@ -46,11 +50,44 @@ public class AuthService {
 				e.printStackTrace();
 				authResult = "WRONG-PWD";
 			}
+
+			if ("OK-USER".equals(authResult) || "OK-NEW-USER".equals(authResult)) {
+				if (!registerActiveUser(user)) {
+					authResult = "USER-ALREADY-CONNECTED";
+				}
+			}
+
 			outStream.writeObject(authResult);
 			outStream.flush();
 			System.out.println("Autenticacao user '" + user + "': " + authResult);
 		} while ("WRONG-PWD".equals(authResult));
+
+		if ("USER-ALREADY-CONNECTED".equals(authResult)) {
+			return null;
+		}
 		return user;
+	}
+
+	private boolean registerActiveUser(String user) {
+		if (user == null || user.isEmpty()) {
+			return false;
+		}
+		synchronized (activeUsers) {
+			if (activeUsers.contains(user)) {
+				return false;
+			}
+			activeUsers.add(user);
+			return true;
+		}
+	}
+
+	public void unregisterActiveUser(String user) {
+		if (user == null || user.isEmpty()) {
+			return;
+		}
+		synchronized (activeUsers) {
+			activeUsers.remove(user);
+		}
 	}
 
 	private String authenticateOrRegister(String user, String passwd) {

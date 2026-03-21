@@ -47,6 +47,10 @@ java -jar dist/SpertaServer.jar 12345
 java -jar dist/SpertaClient.jar localhost:12345 <user-id> <password>
 ```
 
+> Regra de sessao: o servidor permite apenas uma sessao ativa por utilizador.
+> Se o mesmo user tentar autenticar num segundo cliente em simultaneo,
+> a segunda ligacao e rejeitada com `USER-ALREADY-CONNECTED`.
+
 **Exemplo:**
 
 ```bash
