@@ -51,11 +51,46 @@ java -jar dist/SpertaClient.jar localhost:12345 <user-id> <password>
 > Se o mesmo user tentar autenticar num segundo cliente em simultaneo,
 > a segunda ligacao e rejeitada com `USER-ALREADY-CONNECTED`.
 
-**Exemplo:**
+**Exemplo (mesmo PC):**
 
 ```bash
 java -jar dist/SpertaClient.jar localhost:12345 rodrigo frutas
 ```
+
+---
+
+## 🌐 Execução em PCs Diferentes (Rede Local)
+
+O servidor e o cliente podem correr em máquinas distintas na mesma rede.
+Os ficheiros `dist/SpertaServer.jar` e `dist/SpertaClient.jar` já vêm **pré-compilados** no projeto — **não é necessário compilar**.
+
+> [!IMPORTANT]
+> **Atestação:** o servidor valida o tamanho do `SpertaClient.jar`.
+> Ambos os PCs devem usar o **mesmo** `SpertaClient.jar` (o que vem na pasta `dist/`).
+> **Nunca recompilar separadamente** em cada PC, pois os JARs podem ficar com tamanhos diferentes e a atestação falha.
+
+### Passo a passo
+
+1. **Copiar a pasta do projeto** (ou apenas a pasta `dist/`) para ambos os PCs (pen USB, partilha de rede, etc.).
+
+2. **No PC do servidor** — iniciar o servidor:
+   ```bash
+   java -jar dist/SpertaServer.jar 12345
+   ```
+
+3. **No PC do cliente** — usar o IP do servidor (ex: `192.168.1.100`):
+   ```bash
+   java -jar dist/SpertaClient.jar 192.168.1.100:12345 <user> <password>
+   ```
+
+> [!NOTE]
+> Para descobrir o IP do PC servidor, executar `ipconfig` (Windows) ou `ip a` (Linux/macOS).
+
+### Requisitos de rede
+
+- Ambos os PCs devem estar na **mesma rede local** (Wi-Fi ou cabo).
+- A **firewall** do PC servidor deve permitir ligações na porta utilizada (ex: 12345).
+  No Windows, ao iniciar o servidor pela primeira vez, clicar em **"Permitir acesso"** na janela da firewall.
 
 ---
 
