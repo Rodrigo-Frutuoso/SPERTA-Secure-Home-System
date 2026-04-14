@@ -9,6 +9,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.Scanner;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.SSLSocketFactory;
 
 public class ClientSession {
 
@@ -20,11 +22,17 @@ public class ClientSession {
 		this.port = port;
 	}
 
-	public void authenticateAndRun(String user, String password) {
-		try (Socket socket = new Socket(host, port);
-				 ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
-				 ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
-				 Scanner scanner = new Scanner(System.in)) {
+	public void authenticateAndRun(String user, String password, String truststore, 
+								  String truststorePassword, String keystore, String keystorePassword) {
+		// Configurar propriedades TLS antes de criar SSLSocket
+		System.setProperty("javax.net.ssl.trustStore", truststore);
+		System.setProperty("javax.net.ssl.trustStorePassword", truststorePassword);
+		
+		try (SSLSocket socket = (SSLSocket) SSLSocketFactory.getDefault()
+				.createSocket(host, port);
+			 ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
+			 ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
+			 Scanner scanner = new Scanner(System.in)) {
 
 			long jarSize = SpertaClient.getAttestationSize();
 			if (jarSize < 0) {

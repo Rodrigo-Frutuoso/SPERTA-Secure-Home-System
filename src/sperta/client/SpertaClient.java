@@ -13,15 +13,19 @@ public class SpertaClient {
 	private static final int DEFAULT_PORT = 22345;
 
 	public static void main(String[] args) {
-		if (args.length < 3) {
-			System.err.println("Uso: SpertaClient <serverAddress> <user-id> <password>");
+		if (args.length < 7) {
+			System.err.println("Uso: SpertaClient <serverAddress> <truststore> <truststore-password> <keystore> <keystore-password> <user-id> <password>");
 			System.err.println("     serverAddress: <IP/hostname>[:porto]");
 			System.exit(-1);
 		}
 
 		String serverAddress = args[0];
-		String user = args[1];
-		String password = args[2];
+		String truststore = args[1];
+		String truststorePassword = args[2];
+		String keystore = args[3];
+		String keystorePassword = args[4];
+		String user = args[5];
+		String password = args[6];
 
 		String host;
 		int port = DEFAULT_PORT;
@@ -38,7 +42,7 @@ public class SpertaClient {
 		}
 
 		ClientSession session = new ClientSession(host, port);
-		session.authenticateAndRun(user, password);
+		session.authenticateAndRun(user, password, truststore, truststorePassword, keystore, keystorePassword);
 	}
 
 	public static long getAttestationSize() {
