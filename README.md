@@ -36,15 +36,21 @@ O Maven irá:
 ### Servidor
 
 ```bash
-java -jar dist/SpertaServer.jar 12345
+java -jar dist/SpertaServer.jar <port> <cipher-password> <keystore> <keystore-password>
 ```
 
 > Se não for indicado um porto, o servidor usa o porto por omissão **22345**.
+> O `cipher-password` é a palavra-passe usada para cifrar os ficheiros do servidor.
+
+**Exemplo:**
+```bash
+java -jar dist/SpertaServer.jar 22345 secret src/sperta/certs/server.keystore server-password
+```
 
 ### Cliente *(noutro terminal)*
 
 ```bash
-java -jar dist/SpertaClient.jar localhost:12345 <user-id> <password>
+java -jar dist/SpertaClient.jar <serverAddress> <truststore> <trust-pass> <keystore> <key-pass> <user> <password>
 ```
 
 > Regra de sessao: o servidor permite apenas uma sessao ativa por utilizador.
@@ -54,7 +60,8 @@ java -jar dist/SpertaClient.jar localhost:12345 <user-id> <password>
 **Exemplo (mesmo PC):**
 
 ```bash
-java -jar dist/SpertaClient.jar localhost:12345 rodrigo frutas
+java -jar dist/SpertaClient.jar localhost:22345 src/sperta/certs/client.truststore truststore-password src/sperta/certs/client.keystore client-password rodrigo frutas
+
 ```
 
 ---
@@ -75,12 +82,12 @@ Os ficheiros `dist/SpertaServer.jar` e `dist/SpertaClient.jar` já vêm **pré-c
 
 2. **No PC do servidor** — iniciar o servidor:
    ```bash
-   java -jar dist/SpertaServer.jar 12345
+   java -jar dist/SpertaServer.jar 22345 secret src/sperta/certs/server.keystore server-password
    ```
 
 3. **No PC do cliente** — usar o IP do servidor (ex: `192.168.1.100`):
    ```bash
-   java -jar dist/SpertaClient.jar 192.168.1.100:12345 <user> <password>
+   java -jar dist/SpertaClient.jar 192.168.1.100:22345 src/sperta/certs/client.truststore truststore-password src/sperta/certs/client.keystore client-password <user> <password>
    ```
 
 > [!NOTE]
@@ -115,6 +122,12 @@ Os ficheiros `dist/SpertaServer.jar` e `dist/SpertaClient.jar` já vêm **pré-c
 │   └── SpertaServer.class
 │
 ├── src/sperta/
+│   ├── certs/                        # Infraestrutura criptográfica
+│   │   ├── client.keystore
+│   │   ├── client.truststore
+│   │   ├── server.cer
+│   │   └── server.keystore
+│   │
 │   ├── client/
 │   │   ├── ClientCommandLoop.java    # Parser, menu e comandos
 │   │   ├── ClientSession.java        # Socket, atestação e autenticação
@@ -122,6 +135,8 @@ Os ficheiros `dist/SpertaServer.jar` e `dist/SpertaClient.jar` já vêm **pré-c
 │   │
 │   ├── data/                         # Gerado em runtime
 │   │   ├── server/                   # Persistência interna do servidor
+│   │   │   ├── certs/                # Certificados de utilizadores
+│   │   │   │   └── <user>.cer
 │   │   │   ├── houses/
 │   │   │   │   └── <casa>.txt        # Permissões e dispositivos por casa
 │   │   │   ├── logs/
@@ -129,7 +144,7 @@ Os ficheiros `dist/SpertaServer.jar` e `dist/SpertaClient.jar` já vêm **pré-c
 │   │   │   ├── states/
 │   │   │   │   └── <casa>.txt        # Último estado de cada dispositivo
 │   │   │   ├── all_houses.txt        # Casas: casa|owner|contadores
-│   │   │   └── user.txt              # Utilizadores: user:password
+│   │   │   └── user.txt              # Utilizadores: formato hash+salt
 │   │   └── client/
 │   │       └── downloads/            # Ficheiros recebidos nos comandos RT/RH
 │   │
@@ -137,6 +152,7 @@ Os ficheiros `dist/SpertaServer.jar` e `dist/SpertaClient.jar` já vêm **pré-c
 │       ├── AuthService.java          # Atestação e autenticação
 │       ├── ClientSessionHandler.java # Thread por cliente
 │       ├── CommandService.java       # Lógica dos comandos (CREATE/ADD/RD/EC/RT/RH)
+│       ├── CryptoUtils.java          # Funções de hash, base64 e crypto
 │       ├── DataRepository.java       # Persistência e ficheiros
 │       ├── SpertaServer.java         # Ponto de entrada do servidor
 │       └── attestation.txt           # Nome e tamanho esperado do JAR do cliente
@@ -183,10 +199,10 @@ Remove os seguintes artefactos gerados:
 mvn clean package
 
 # Iniciar servidor
-java -jar dist/SpertaServer.jar 12345
+java -jar dist/SpertaServer.jar 22345 secret src/sperta/certs/server.keystore server-password
 
 # Iniciar cliente
-java -jar dist/SpertaClient.jar localhost:12345 <user> <password>
+java -jar dist/SpertaClient.jar localhost:22345 src/sperta/certs/client.truststore truststore-password src/sperta/certs/client.keystore client-password <user> <password>
 
 # Limpar
 mvn clean

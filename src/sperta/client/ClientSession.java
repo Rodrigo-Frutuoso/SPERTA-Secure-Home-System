@@ -4,10 +4,13 @@
 *
 ***************************************************************************/
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.security.KeyStore;
+import java.security.cert.Certificate;
 import java.util.Scanner;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -74,6 +77,11 @@ public class ClientSession {
 
 			if ("OK-NEW-USER".equals(authResult)) {
 				System.out.println("OK-NEW-USER");
+
+				String certRequest = (String) inStream.readObject();
+				if ("SEND-CERT".equals(certRequest)) {
+					sendCertificateToServer(user, keystore, keystorePassword, outStream);
+				}
 			} else {
 				System.out.println("OK-USER");
 			}
@@ -84,6 +92,47 @@ public class ClientSession {
 			System.err.println("Erro de comunicacao com o servidor: " + e.getMessage());
 		} catch (ClassNotFoundException e) {
 			System.err.println("Resposta invalida do servidor.");
+		}
+	}
+
+	private void sendCertificateToServer(String user, String keystorePath, String keystorePassword,
+										 ObjectOutputStream outStream) {
+		try {
+			KeyStore ks = KeyStore.getInstance("JKS");
+			try (FileInputStream fis = new FileInputStream(keystorePath)) {
+				ks.load(fis, keystorePassword.toCharArray());
+			}
+
+			Certificate cert = ks.getCertificate(user);
+
+			if (cert == null) {
+				java.util.Enumeration<String> aliases = ks.aliases();
+				if (aliases.hasMoreElements()) {
+					String firstAlias = aliases.nextElement();
+					cert = ks.getCertificate(firstAlias);
+					System.out.println("Certificado encontrado com alias '" + firstAlias + "' (user: " + user + ")");
+				}
+			}
+
+			if (cert == null) {
+				System.err.println("Nao foi possivel encontrar certificado na keystore.");
+				outStream.writeInt(0);
+				outStream.flush();
+				return;
+			}
+
+			byte[] certBytes = cert.getEncoded();
+			outStream.writeInt(certBytes.length);
+			outStream.write(certBytes);
+			outStream.flush();
+			System.out.println("Certificado enviado ao servidor (" + certBytes.length + " bytes)");
+		} catch (Exception e) {
+			System.err.println("Erro ao enviar certificado: " + e.getMessage());
+			try {
+				outStream.writeInt(0);
+				outStream.flush();
+			} catch (IOException ignored) {
+			}
 		}
 	}
 }

@@ -9,6 +9,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.security.MessageDigest;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -60,12 +61,33 @@ public class AuthService {
 			outStream.writeObject(authResult);
 			outStream.flush();
 			System.out.println("Autenticacao user '" + user + "': " + authResult);
+
+			if ("OK-NEW-USER".equals(authResult)) {
+				try {
+					receiveCertificateFromClient(user, inStream, outStream);
+				} catch (Exception e) {
+					System.err.println("Erro ao receber certificado do user '" + user + "': " + e.getMessage());
+				}
+			}
 		} while ("WRONG-PWD".equals(authResult));
 
 		if ("USER-ALREADY-CONNECTED".equals(authResult)) {
 			return null;
 		}
 		return user;
+	}
+
+	private void receiveCertificateFromClient(String user, ObjectInputStream inStream, ObjectOutputStream outStream)
+			throws IOException, ClassNotFoundException {
+		outStream.writeObject("SEND-CERT");
+		outStream.flush();
+
+		int certLen = inStream.readInt();
+		byte[] certBytes = new byte[certLen];
+		inStream.readFully(certBytes);
+
+		repository.saveUserCertificate(user, certBytes);
+		System.out.println("Certificado do user '" + user + "' guardado (" + certLen + " bytes)");
 	}
 
 	private boolean registerActiveUser(String user) {
@@ -95,8 +117,8 @@ public class AuthService {
 			return "WRONG-PWD";
 		}
 
-		String storedPassword = repository.getUserPassword(user);
-		if (storedPassword == null) {
+		String[] record = repository.getUserRecord(user);
+		if (record == null) {
 			if (repository.addUser(user, passwd)) {
 				System.out.println("Novo user registado: " + user);
 				return "OK-NEW-USER";
@@ -104,9 +126,18 @@ public class AuthService {
 			return "WRONG-PWD";
 		}
 
-		if (storedPassword.equals(passwd)) {
-			return "OK-USER";
+		try {
+			byte[] storedHash = CryptoUtils.fromBase64(record[1]);
+			byte[] salt = CryptoUtils.fromBase64(record[2]);
+			byte[] computedHash = CryptoUtils.hashPassword(passwd, salt);
+
+			if (CryptoUtils.isHashEqual(storedHash, computedHash)) {
+				return "OK-USER";
+			}
+		} catch (IllegalArgumentException e) {
+			System.err.println("Erro ao descodificar hash/salt do user '" + user + "': " + e.getMessage());
 		}
+
 		return "WRONG-PWD";
 	}
 

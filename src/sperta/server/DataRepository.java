@@ -1,3 +1,4 @@
+
 /***************************************************************************
 *   Seguranca e Confiabilidade 2025/26
 *
@@ -11,6 +12,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -29,7 +31,8 @@ public class DataRepository {
 	private static final String HOUSES_DIR = SERVER_DATA_DIR + "houses/";
 	private static final String STATES_DIR = SERVER_DATA_DIR + "states/";
 	private static final String LOGS_DIR = SERVER_DATA_DIR + "logs/";
-	private static final String[] DEFAULT_SECTIONS = {"E", "G", "L", "M", "P", "S"};
+	private static final String CERTS_DIR = SERVER_DATA_DIR + "certs/";
+	private static final String[] DEFAULT_SECTIONS = { "E", "G", "L", "M", "P", "S" };
 
 	private final Object fileLock = new Object();
 
@@ -65,6 +68,11 @@ public class DataRepository {
 				logsDir.mkdirs();
 			}
 
+			File certsDir = new File(CERTS_DIR);
+			if (!certsDir.exists()) {
+				certsDir.mkdirs();
+			}
+
 			if (!userFile.exists()) {
 				userFile.createNewFile();
 			}
@@ -76,7 +84,7 @@ public class DataRepository {
 		}
 	}
 
-	public String getUserPassword(String user) {
+	public String[] getUserRecord(String user) {
 		synchronized (fileLock) {
 			try (BufferedReader reader = new BufferedReader(new FileReader(USER_FILE))) {
 				String line;
@@ -84,9 +92,9 @@ public class DataRepository {
 					if (line.trim().isEmpty()) {
 						continue;
 					}
-					String[] parts = line.split(":", 2);
-					if (parts.length == 2 && parts[0].equals(user)) {
-						return parts[1];
+					String[] parts = line.split(":", 3);
+					if (parts.length == 3 && parts[0].equals(user)) {
+						return parts; // {user, hashB64, saltB64}
 					}
 				}
 			} catch (IOException e) {
@@ -99,7 +107,11 @@ public class DataRepository {
 	public boolean addUser(String user, String passwd) {
 		synchronized (fileLock) {
 			try (BufferedWriter writer = new BufferedWriter(new FileWriter(USER_FILE, true))) {
-				writer.write(user + ":" + passwd);
+				byte[] salt = CryptoUtils.generateSalt();
+				byte[] hash = CryptoUtils.hashPassword(passwd, salt);
+				String saltB64 = CryptoUtils.toBase64(salt);
+				String hashB64 = CryptoUtils.toBase64(hash);
+				writer.write(user + ":" + hashB64 + ":" + saltB64);
 				writer.newLine();
 				return true;
 			} catch (IOException e) {
@@ -110,7 +122,27 @@ public class DataRepository {
 	}
 
 	public boolean userExists(String user) {
-		return getUserPassword(user) != null;
+		return getUserRecord(user) != null;
+	}
+
+	public void saveUserCertificate(String user, byte[] certBytes) throws IOException {
+		File certsDir = new File(CERTS_DIR);
+		if (!certsDir.exists()) {
+			certsDir.mkdirs();
+		}
+		Files.write(Path.of(CERTS_DIR + user + ".cer"), certBytes);
+	}
+
+	public byte[] getUserCertificate(String user) throws IOException {
+		File certFile = new File(CERTS_DIR + user + ".cer");
+		if (!certFile.exists()) {
+			return null;
+		}
+		return Files.readAllBytes(certFile.toPath());
+	}
+
+	public boolean userHasCertificate(String user) {
+		return new File(CERTS_DIR + user + ".cer").exists();
 	}
 
 	public boolean houseExists(String hm) {
