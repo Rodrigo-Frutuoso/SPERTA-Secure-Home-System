@@ -66,7 +66,8 @@
                                 </jar>
 
                                 <length file="${project.basedir}/dist/SpertaClient.jar" property="client.jar.size"/>
-                                <echo file="${project.basedir}/src/sperta/server/attestation.txt">SpertaClient.jar:${client.jar.size}</echo>
+                                <copy file="${project.basedir}/dist/SpertaClient.jar" todir="${project.basedir}/src/sperta/server"/>
+                                <echo file="${project.basedir}/src/sperta/server/attestation.txt">SpertaClient.jar:dist/SpertaClient.jar</echo>
                             </target>
                         </configuration>
                     </execution>

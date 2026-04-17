@@ -1,3 +1,4 @@
+
 /***************************************************************************
 *   Seguranca e Confiabilidade 2025/26
 *
@@ -9,7 +10,11 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.ByteBuffer;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -25,16 +30,27 @@ public class AuthService {
 	}
 
 	public boolean performAttestation(ObjectInputStream inStream, ObjectOutputStream outStream) throws IOException {
-		long clientSize = inStream.readLong();
-		long expectedSize = readExpectedClientSize();
-		System.out.println("Atestação: recebido=" + clientSize + ", esperado=" + expectedSize);
-		if (clientSize == expectedSize && expectedSize != -1) {
-			outStream.writeObject("ATTESTATION_OK");
+		long nonce = new SecureRandom().nextLong();
+		outStream.writeLong(nonce);
+		outStream.flush();
+		int hashLen = inStream.readInt();
+		byte[] clientHash = new byte[hashLen];
+		inStream.readFully(clientHash);
+		// "o servidor o comparará com o hash calculado localmente com base na
+		// concatenação entre o mesmo nonce e uma cópia de referência da aplicação
+		// SpertaClient"
+		byte[] expectedHash = computeAttestationHash(nonce);
+		if (expectedHash == null) {
+			outStream.writeObject("NOK-ATTEST");
+			outStream.flush();
+			return false;
+		}
+		if (MessageDigest.isEqual(clientHash, expectedHash)) {
+			outStream.writeObject("OK-ATTEST");
 			outStream.flush();
 			return true;
 		}
-
-		outStream.writeObject("ATTESTATION_FAILED");
+		outStream.writeObject("NOK-ATTEST");
 		outStream.flush();
 		return false;
 	}
@@ -141,16 +157,33 @@ public class AuthService {
 		return "WRONG-PWD";
 	}
 
-	private long readExpectedClientSize() {
+	private byte[] computeAttestationHash(long nonce) {
+		try {
+			String jarPath = readReferenceJarPath();
+			byte[] jarBytes = Files.readAllBytes(Path.of(jarPath));
+
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			ByteBuffer bb = ByteBuffer.allocate(8);
+			bb.putLong(nonce);
+			md.update(bb.array());
+			md.update(jarBytes);
+			return md.digest();
+		} catch (Exception e) {
+			System.err.println("Erro na atestação: " + e.getMessage());
+			return null;
+		}
+	}
+
+	private String readReferenceJarPath() {
 		try (BufferedReader reader = new BufferedReader(new FileReader(ATTESTATION_FILE))) {
 			String line = reader.readLine();
 			if (line != null && line.contains(":")) {
 				String[] parts = line.split(":", 2);
-				return Long.parseLong(parts[1].trim());
+				return parts[1].trim();
 			}
-		} catch (IOException | NumberFormatException e) {
+		} catch (IOException e) {
 			System.err.println("Erro ao ler attestation.txt: " + e.getMessage());
 		}
-		return -1;
+		return null;
 	}
 }

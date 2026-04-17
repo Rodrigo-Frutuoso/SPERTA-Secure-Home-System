@@ -1,3 +1,4 @@
+
 /***************************************************************************
 *   Seguranca e Confiabilidade 2025/26
 *
@@ -8,9 +9,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.net.Socket;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
+import java.nio.ByteBuffer;
+import java.security.MessageDigest;
 import java.util.Scanner;
 import javax.net.ssl.SSLSocket;
 import javax.net.ssl.SSLSocketFactory;
@@ -25,33 +27,39 @@ public class ClientSession {
 		this.port = port;
 	}
 
-	public void authenticateAndRun(String user, String password, String truststore, 
-								  String truststorePassword, String keystore, String keystorePassword) {
+	public void authenticateAndRun(String user, String password, String truststore,
+			String truststorePassword, String keystore, String keystorePassword) {
 		// Configurar propriedades TLS antes de criar SSLSocket
 		System.setProperty("javax.net.ssl.trustStore", truststore);
 		System.setProperty("javax.net.ssl.trustStorePassword", truststorePassword);
-		
-		try (SSLSocket socket = (SSLSocket) SSLSocketFactory.getDefault()
-				.createSocket(host, port);
-			 ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
-			 ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
-			 Scanner scanner = new Scanner(System.in)) {
 
-			long jarSize = SpertaClient.getAttestationSize();
-			if (jarSize < 0) {
-				System.out.println("ATTESTATION FAILED");
-				System.err.println("Nao foi possivel obter o tamanho do JAR do cliente. Execute via JAR.");
+		try (SSLSocket socket = (SSLSocket) SSLSocketFactory.getDefault().createSocket(host, port);
+			ObjectOutputStream outStream = new ObjectOutputStream(socket.getOutputStream());
+			ObjectInputStream inStream = new ObjectInputStream(socket.getInputStream());
+			Scanner scanner = new Scanner(System.in)) {
+
+			long nonce = inStream.readLong();
+			byte[] jarBytes = SpertaClient.getJarBytes();
+			if (jarBytes == null) {
+				System.out.println("NOK-ATTEST");
 				return;
 			}
-
-			outStream.writeLong(jarSize);
+			// "calculará o hash SHA256 desta concatenação"
+			MessageDigest md = MessageDigest.getInstance("SHA-256");
+			ByteBuffer bb = ByteBuffer.allocate(8);
+			bb.putLong(nonce);
+			md.update(bb.array());
+			md.update(jarBytes);
+			byte[] hash = md.digest();
+			outStream.writeInt(hash.length);
+			outStream.write(hash);
 			outStream.flush();
 
 			String attestResult = (String) inStream.readObject();
-			if ("ATTESTATION_OK".equals(attestResult)) {
-				System.out.println("ATTESTATION OK");
+			if ("OK-ATTEST".equals(attestResult)) {
+				System.out.println("OK-ATTEST");
 			} else {
-				System.out.println("ATTESTATION FAILED");
+				System.out.println("NOK-ATTEST");
 				return;
 			}
 
@@ -92,11 +100,12 @@ public class ClientSession {
 			System.err.println("Erro de comunicacao com o servidor: " + e.getMessage());
 		} catch (ClassNotFoundException e) {
 			System.err.println("Resposta invalida do servidor.");
+		} catch (Exception e) {
+			System.err.println("Erro na atestação ou execucao: " + e.getMessage());
 		}
 	}
 
-	private void sendCertificateToServer(String user, String keystorePath, String keystorePassword,
-										 ObjectOutputStream outStream) {
+	private void sendCertificateToServer(String user, String keystorePath, String keystorePassword, ObjectOutputStream outStream) {
 		try {
 			KeyStore ks = KeyStore.getInstance("JKS");
 			try (FileInputStream fis = new FileInputStream(keystorePath)) {

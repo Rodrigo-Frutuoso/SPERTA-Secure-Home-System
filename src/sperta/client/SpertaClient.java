@@ -7,6 +7,7 @@
 import java.io.File;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
 
 public class SpertaClient {
 
@@ -45,21 +46,15 @@ public class SpertaClient {
 		session.authenticateAndRun(user, password, truststore, truststorePassword, keystore, keystorePassword);
 	}
 
-	public static long getAttestationSize() {
+	public static byte[] getJarBytes() {
 		try {
 			URL location = SpertaClient.class.getProtectionDomain().getCodeSource().getLocation();
-			if (location == null) {
-				return -1;
+			if (location == null) return null;
+			File jar = new File(location.toURI());
+			if (jar.isFile() && jar.getName().toLowerCase().endsWith(".jar")) {
+				return Files.readAllBytes(jar.toPath());
 			}
-
-			File executable = new File(location.toURI());
-			if (executable.isFile() && executable.getName().toLowerCase().endsWith(".jar")) {
-				return executable.length();
-			}
-		} catch (URISyntaxException | SecurityException e) {
-			return -1;
-		}
-
-		return -1;
+		} catch (Exception e) { return null; }
+		return null;
 	}
 }
