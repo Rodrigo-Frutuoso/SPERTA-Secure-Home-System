@@ -1,0 +1,399 @@
+1
+API segurança do Java
+Java Secure Socket Extension (JSSE)
+TLS/SSL
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+Segurança e Confiabilidade
+Nuno Neves, Ibéria Medeiros, Alan Oliveira
+2025/2026
+2
+TLS/SSL e HTTPS
+❖ O Java Secure Socket Extension (JSSE) realiza uma camada por cima
+do TCP que adiciona segurança à troca de dados entre duas entidades
+❖A segurança é conseguida através de uma concretização do protocolo
+TLS/SSL
+❖ O JSSE oferece uma interface ao protocolo TLS sobre sockets TCP (não
+existe suporte para outros protocolos como UDP)
+❖Principais vantagens do TLS/SSL:
+➢ suportado por um número elevado de servidores e browsers
+➢ interface simples para cifra com criptografia híbrida (usa criptografia
+assimétrica para distribuir uma chave secreta (simétrica) para ser
+usada para cifrar os dados da comunicação entre duas entidades)
+➢ bem adaptado a Web, uma vez que normalmente apenas os
+servidores se autenticam através de um certificado, usando os clientes
+outras formas de autenticação (ex., passwords)
+“Java Security”, cap. 14
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+3
+Algumas ideias do protocolo TLS/SSL
+❖ À inicialização do protocolo TLS/SSL chama-se o SSL Handshake
+… e agora podem comunicar de uma forma segura ......
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+4
+Algumas ideias sobre o protocolo TLS/SSL
+❖ Opcionalmente o servidor pode pedir ao cliente o seu certificado, para que
+este também se autentique
+❖Do ponto de vista do programador, estes passos todos são executados de
+uma forma transparente, quando a socket é criada
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+6
+Truststores e Keystores (1)
+❖ O JSSE introduz o conceito das truststores que são basicamente uma
+keystore que guarda certos certificados
+❖Partilham
+➢ o mesmo formato
+➢ são representadas programaticamente por um objecto KeyStore
+➢ são geridas pelas keytool
+❖ O servidor utiliza durante a autenticação a chave privada e o respetivo
+certificado armazenados na keystore
+❖O cliente para verificar o certificado do servidor (que recebe deste)
+necessita do certificado da CA que emitiu e assinou o certificado do
+servidor. O certificado da CA contém a chave pública deste e que permitirá
+validar a assinatura do certificado do servidor. O CA é a raiz de todo o
+processo de segurança. Este certificado é guardado na truststore.
+❖ Se o servidor necessitar de verificar o certificado do cliente, então este
+também necessita de uma truststore.
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+7
+Truststores e Keystores (2)
+❖ Embora a keystore e a truststore possam corresponder ao mesmo ficheiro,
+normalmente é mais fácil a gestão se a keystore tiver apenas um alias
+com o certificado/chave privada do servidor
+❖ Por omissão é assumido que a truststore está em primeiro lugar em
+$JREHOME/lib/security/jssecacerts, e em segundo lugar
+$JREHOME/lib/security/cacerts
+❖ As seguintes propriedades podem ser usadas
+➢ javax.net.ssl.trustStore: sítio da truststore para o SSL/TLS
+➢ javax.net.ssl.keyStore: sítio da keystore para o SSL/TLS
+➢ javax.net.ssl.keyStorePassword: password da keystore (a password
+que protege a chave privada deve ser igual)
+❖Normalmente é aconselhado o uso do algoritmo RSA para assinatura
+porque é o mais suportado pelos browsers
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+8
+Exemplo: guardar um certificado em uma truststore
+❖ Criar o par de chaves RSA do servidor e o seu certificado auto-assinado
+keytool -genkeypair -alias myServer -keyalg RSA -keysize 2048 -keystore keystore.server
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+keytool –list -keystore keystore.server
+alias Contem a chave privada e o certificado que
+contem a chave pública
+Dar a path para
+onde armazenar o
+ficheiro da keystore
+9
+Exemplo: guardar um certificado em uma truststore
+❖ Exportar o certificado auto-assinado do servidor
+keytool -exportcert -alias myServer -file certServer.cer -keystore keystore.server
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+Dar a path para onde armazenar o ficheiro
+❖ Ver o conteúdo do certificado (formato com o certificado cer)
+keytool -printcert -file certServer.cer
+É um certificado auto-assinado porque o
+Owner e o Issuer são iguais
+Fringerprint SHA1 que aparece no slide
+anterior.
+10
+Exemplo: guardar um certificado em uma truststore
+❖ Importar certificado na truststore do cliente (o servidor serve de CA, já que
+seu certificado é auto-assinado)
+keytool -importcert -alias myServer -file certServer.cer -keystore truststore.client
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+- Dar a path para onde armazenar
+o ficheiro da truststore.
+- A opção keystore mantem-se na
+criação da truststore.
+Alias do certificado
+que queremos
+importar
+11
+Exemplo: guardar um certificado em uma truststore
+❖ Ver o conteúdo da truststore
+keytool -list -keystore truststore.client
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+Fringerprint SHA1 do certificado que
+importamos. Verificar que é igual ao slide 2
+atrás.
+Indicativo que é um certificado
+importado -> um trusted
+certificate.
+13
+Classes Factory para a criação de sockets - Server
+❖ Estas classes factory dão mais flexibilidade à criação de diferentes tipos de
+sockets usados no sistema
+➢ Ex.: subclasses das factories podem criar sockets com características
+pré configuradas ou mesmo retornar sockets específicos
+❖Pode ser usada tanto para a criação de sockets normais e sockets que
+usam o SSL
+❖As classes javax.net.SocketFactory e javax.net.ServerSocketFactory
+produzem respectivamente sockets normais para o lado do cliente e
+servidor
+❖ A API do ServerSocketFactory é
+➢ public static ServerSocketFactory getDefault( )
+• devolve a server socket factory que produz sockets normais
+➢ public ServerSocket createServerSocket(int port)
+➢ public ServerSocket createServerSocket(int port, int backlog,
+InetAddress addr)
+• cria uma socket servidor que escuta num dado porto (com um
+específico backlog e interface de rede)
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+14
+Classes Factory para a criação de sockets - Client
+❖ A API da classe SocketFactory é
+➢ public static SocketFactory getDefault( )
+• devolve uma socket factory que produz sockets cliente normais
+➢ public Socket createSocket(String host, int port)
+➢ public Socket createSocket(InetAddress host, int port)
+➢ public Socket createSocket(String host, int port, InetAddress
+clientHost, int clientPort)
+➢ public Socket createSocket(InetAddress address, int port, InetAddress
+client, int clientPort)
+• cria uma socket que se vai ligar a uma dada máquina e porto
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+15
+SSL Sockets - Server
+❖ A classe javax.net.ssl.SSLEngine concretiza a maquina de estados do
+SSL e permite o uso de I/O não-bloqueante.
+❖A classe javax.net.ssl.SSLServerSocketFactory cria sockets do tipo
+servidor que usam o protocolo SSL
+❖ O método getDefault() é usado para se obter uma classe que produz este
+tipo de sockets
+➢ public static SSLServerSocketFactory getDefault( )
+❖ A criação do socket é pelos métodos de createServerSocket (ver atrás),
+que permite criar SSLSocket pela classe SSLServerSocket, a qual extende
+a classe ServerSocket.
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+ServerSocketFactory ssf = SSLServerSocketFactory.getDefault();
+SSLServerSocket ss = (SSLServerSocket) ssf.createServerSocket(9096);
+16
+SSL Sockets - Client
+❖ A classe javax.net.ssl.SSLSocketFactory produz sockets do tipo cliente
+que usam o protocolo SSL
+❖Tal como acima, deve-se usar o método getDefault() para se obter a
+factory
+➢ public static SSLSocketFactory getDefault( )
+❖ A criação do socket é pelos métodos de createSocket (ver atrás), que
+permite criar SSLSocket pela classe SSLSocket, a qual estende a classe
+Socket
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+SocketFactory sf = SSLSocketFactory.getDefault();
+SSLSocket ss = (SSLSocket) ssf.createSocket(“127.0.0.1”, 9096);
+17
+Exemplo de servidor (1)
+public class SSLSimpleServer extends Thread {
+private Socket sock;
+public SSLSimpleServer(Socket s) { // construtor
+sock = s;
+}
+public static void main(String[] args) throws Exception {
+ServerSocketFactory ssf = SSLServerSocketFactory.getDefault( );
+SSLServerSocket ss = (SSLServerSocket) ssf.createServerSocket(9096);
+while (true) {
+new SSLSimpleServer(ss.accept()).start( ); // uma thread por ligação
+}
+}
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+18
+Exemplo de servidor (2)
+public void run( ) {
+try {
+BufferedReader br = new BufferedReader(new
+InputStreamReader(sock.getInputStream( )));
+PrintWriter pw = new PrintWriter(sock.getOutputStream( ));
+String data = br.readLine( );
+pw.println("What is she?");
+pw.close( );
+sock.close( );
+} catch (IOException ioe) {
+// Client disconnected; exit this thread
+}
+}
+}
+Notar que o código para comunicação
+é semelhante ao código para ligações
+TCP normais (sem segurança).
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+19
+Exemplo de servidor (3)
+❖ O comando necessário para executar o servidor será algo como:
+➢ java −Djavax.net.ssl.keyStore=$HOME/.keystore.server
+−Djavax.net.ssl.keyStorePassword=kspass
+SSLSimpleServer
+❖ Ou em alternativa definir no programa:
+System.setProperty("javax.net.ssl.keyStore"
+,
+"keystore.server");
+System.setProperty("javax.net.ssl.keyStorePassword"
+, "password");
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+O ficheiro keystore.server contém o par de chaves pública e privada do servidor.
+A chave pública está contida num certificado.
+20
+Exemplo de servidor (4)
+public class SSLSimpleServer extends Thread {
+private Socket sock;
+public SSLSimpleServer(Socket s) { sock = s; } // construtor
+public static void main(String[] args) throws Exception {
+System.setProperty("javax.net.ssl.keyStore", "keystore.server");
+System.setProperty("javax.net.ssl.keyStorePassword", "password");
+ServerSocketFactory ssf = SSLServerSocketFactory.getDefault( );
+SSLServerSocket ss = (SSLServerSocket) ssf.createServerSocket(9096);
+while (true) {
+new SSLSimpleServer(ss.accept()).start( ); // uma thread por ligação
+}
+}
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+As properties são definidas antes da
+criação do SSLServerSocket
+21
+Exemplo de cliente (1)
+public class SSLSimpleClient {
+public static void main(String[] args) throws Exception {
+SocketFactory sf = SSLSocketFactory.getDefault( );
+SSLSocket s = (SSLSocket) sf.createSocket(args[0], Integer.parseInt(args[1]));
+BufferedReader br = new BufferedReader(new
+InputStreamReader(s.getInputStream( )));
+PrintWriter pw = new PrintWriter(s.getOutputStream( ));
+System.out.println("Who is Sylvia?");
+pw.println("Who is Sylvia?");
+pw.flush( );
+System.out.println(br.readLine( ));
+s.close( );
+}
+}
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+22
+Exemplo de cliente (2)
+❖ O comando usado para correr o cliente será algo do estilo
+➢ java
+−Djavax.net.ssl.trustStore=$HOME/.truststore.client
+−Djavax.net.ssl.trustStorePassword=tspass
+SSLSimpleClient localhost 9096
+❖ Ou em alternativa definir no programa:
+System.setProperty("javax.net.ssl.trustStore"
+,
+“truststore.client");
+System.setProperty("javax.net.ssl.trustStorePassword"
+, "password");
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+O ficheiro truststore.client contém o certificado do servidor.
+O ficheiro, apesar de chamarmos truststore, é uma keystore.
+23
+Exemplo de cliente (3)
+public class SSLSimpleClient {
+public static void main(String[] args) throws Exception {
+System.setProperty("javax.net.ssl.trustStore", “truststore.client");
+System.setProperty("javax.net.ssl.trustStorePassword", "password");
+SocketFactory sf = SSLSocketFactory.getDefault( );
+SSLSocket s = (SSLSocket) sf.createSocket(args[0], Integer.parseInt(args[1]));
+BufferedReader br = new BufferedReader(new
+InputStreamReader(s.getInputStream( )));
+PrintWriter pw = new PrintWriter(s.getOutputStream( ));
+System.out.println("Who is Sylvia?");
+pw.println("Who is Sylvia?");
+pw.flush( );
+System.out.println(br.readLine( ));
+s.close( );
+}
+}
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+As properties são definidas antes da
+criação do SSLSocket
+24
+Debugging SSL connection
+❖ Podemos fazer debug da conexão SSL para vermos:
+➢ as diferentes partes do estabelecimento do canal seguro (handshake,
+cipher change, specification, session key generation, …)
+➢ transmissão dos dados cifrados com a chave de sessão (data
+application)
+➢ Passamos à JVM a flag −Djavax.net.debug=all ou
+−Djavax.net.debug=ssl na execução de uma das pontas da
+comunicação ou em ambas.
+➢ java −Djavax.net.debug=all
+−Djavax.net.ssl.keyStore=$HOME/.keystore.server
+−Djavax.net.ssl.keyStorePassword=kspass
+SSLSimpleServer
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+25
+Autenticação do cliente (opcional)
+❖ Servidor pode requerer autenticação do cliente
+…
+ServerSocketFactory ssf = SSLServerSocketFactory.getDefault( );
+SSLServerSocket ss = (SSLServerSocket) ssf.createServerSocket(9096);
+ss.setNeedClientAuth(true);
+❖ Correr o servidor com truststore dos certificados dos clientes
+➢ java −Djavax.net.ssl.keyStore =$HOME/.keystore.server
+−Djavax.net.ssl.keyStorePassword=kspass
+-Djavax.net.ssl.trustStore=$HOME/.truststore.clients
+−Djavax.net.ssl.trustStorePassword=tspass
+SSLSimpleServer
+❖ Cada cliente precisa de uma chave privada num keystore
+➢ java −Djavax.net.ssl.trustStore=$HOME/.truststore.client
+−Djavax.net.ssl.trustStorePassword=clienttspass
+-Djavax.net.ssl.keyStore= =$HOME/.clientks
+-Djavax.net.ssl.keyStorePassword=clientkspass
+SSLSimpleClient localhost 9096
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+26
+Sessões SSL (1)
+❖ Quando se realiza uma ligação de uma socket SSL, esta fica associada a
+uma sessão SSL que mantém um conjunto de informações administrativas
+❖ Caso existam diversas ligações entre o mesmo cliente e servidor, então é
+possível que estas partilhem a mesma sessão
+❖ A classe javax.net.ssl.SSLSession representa esta informação, e objectos
+desta classe podem ser obtidos através do seguinte método das
+SSLSocket
+➢ public SSLSession getSession( )
+❖ A interface do SSLSession oferece os métodos
+➢ public byte[] getId( )
+• retorna o identificador associado a esta sessão
+➢ public SSLSessionContext getSessionContext( )
+• devolve o contexto da sessão
+➢ public long getCreationTime( )
+• devolve o instante em que a sessão foi criada
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+27
+Sessões SSL (2)
+➢ public long getLastAccessedTime( )
+• instante em que a sessão foi acedida pela última vez (i.e., quando
+uma nova ligação foi adicionada à sessão)
+➢ public void invalidate( )
+• invalidar a sessão (as ligações existente não são afectadas, mas
+novas ligações têm de usar uma nova sessão)
+➢ public void putValue(String name, Object value)
+• associar um objecto com um dado nome a esta sessão
+➢ public Object getValue(String name)
+• devolve objecto com o nome especificado
+➢ public void removeValue(String name)
+• remove objecto com o nome indicado
+➢ public String[] getValueNames( )
+• nomes de todos os objectos associados
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+28
+Sessões SSL (3)
+➢ public javax.security.cert.X509Certificate[] getPeerCertificateChain( )
+• obter os certificados que nos foram enviados
+➢ public String getCipherSuite( )
+• devolve nome do algoritmos criptográficos acordados
+➢ public String getPeerHost( )
+• retorna o nome máquina remota
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
+29
+Exemplo 2 de cliente
+public class SSLClientVerifier {
+public static void main(String[] args) throws Exception {
+SocketFactory sf = SSLSocketFactory.getDefault( );
+SSLSocket s = (SSLSocket) sf.createSocket(args[0], Integer.parseInt(args[1]));
+SSLSession sess = s.getSession( );
+String host = sess.getPeerHost( );
+X509Certificate[] certs = sess.getPeerCertificateChain( );
+String dn = certs[0].getSubjectDN().getName( );
+X500Name name = new X500Name(dn); // X500Name é uma classe vossa
+if (!host.equals(name.getCN( )))
+System.err.println(“Expected " + host + " and got " + name.getCN( ));
+BufferedReader br = new BufferedReader(new
+InputStreamReader(s.getInputStream( )));
+PrintWriter pw = new PrintWriter(s.getOutputStream( ));
+System.out.println("Who is Sylvia?");
+.......... o resto é semelhante ...............
+2026 D. Domingos, I. Medeiros, N. Neves. Reprodução proibida sem autorização prévia.
