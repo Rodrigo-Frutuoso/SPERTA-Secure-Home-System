@@ -12,16 +12,14 @@ import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 
-//Servidor SpertaServer
-
 public class SpertaServer {
 
 	private static final int DEFAULT_PORT = 22345;
 	private final AuthService authService;
 	private final CommandService commandService;
 
-	public SpertaServer() {
-		DataRepository repository = new DataRepository();
+	public SpertaServer(String cipherPassword) {
+		DataRepository repository = new DataRepository(cipherPassword);
 		this.authService = new AuthService(repository);
 		this.commandService = new CommandService(repository);
 	}
@@ -41,8 +39,8 @@ public class SpertaServer {
 		System.setProperty("javax.net.ssl.keyStore", keystorePath);
 		System.setProperty("javax.net.ssl.keyStorePassword", keystorePassword);
 
-		SpertaServer server = new SpertaServer();
-		server.startSSLServer(port, cipherPassword);
+		SpertaServer server = new SpertaServer(cipherPassword);
+		server.startSSLServer(port);
 	}
 
 	public void startServer(int port) {
@@ -58,12 +56,12 @@ public class SpertaServer {
 		}
 	}
 
-	public void startSSLServer(int port, String cipherPassword) {
+	public void startSSLServer(int port) {
 		try {
 			ServerSocketFactory ssf = SSLServerSocketFactory.getDefault();
 			SSLServerSocket ss = (SSLServerSocket) ssf.createServerSocket(port);
 			System.out.println("Servidor TLS a escutar na porta " + port);
-			
+
 			while (true) {
 				SSLSocket clientSocket = (SSLSocket) ss.accept();
 				ClientSessionHandler session = new ClientSessionHandler(clientSocket, authService, commandService);
