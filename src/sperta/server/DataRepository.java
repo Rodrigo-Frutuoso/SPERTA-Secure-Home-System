@@ -41,6 +41,7 @@ public class DataRepository {
 	private static final String STATES_DIR = SERVER_DATA_DIR + "states/";
 	private static final String LOGS_DIR = SERVER_DATA_DIR + "logs/";
 	private static final String CERTS_DIR = SERVER_DATA_DIR + "certs/";
+	private static final String KEYS_DIR = SERVER_DATA_DIR + "keys/";
 	private static final String SALT_FILE = SERVER_DATA_DIR + "server.salt";
 	private static final String[] DEFAULT_SECTIONS = { "E", "G", "L", "M", "P", "S" };
 
@@ -300,6 +301,7 @@ public class DataRepository {
 		new File(STATES_DIR).mkdirs();
 		new File(LOGS_DIR).mkdirs();
 		new File(CERTS_DIR).mkdirs();
+		new File(KEYS_DIR).mkdirs();
 	}
 
 
@@ -669,6 +671,76 @@ public class DataRepository {
 		synchronized (fileLock) {
 			File logFile = new File(LOGS_DIR + hm + "/" + device + ".csv");
 			return secureReadFile(logFile);
+		}
+	}
+
+
+	// ======================== Key Management (E2E) ========================
+
+	/**Guarda uma chave de secção wrapped (cifrada com RSA) para um utilizador.
+	 * Ficheiro cifrado com PBE + hash de integridade.
+	 * Nome: key.<hm>.<section>.<user> */
+	public void saveWrappedKey(String hm, String section, String user, byte[] wrappedKey) {
+		synchronized (fileLock) {
+			File keyFile = new File(KEYS_DIR + "key." + hm + "." + section + "." + user);
+			secureWriteFile(keyFile, wrappedKey);
+		}
+	}
+
+	/**Lê uma chave de secção wrapped para um utilizador.
+	 * Retorna null se não existir.*/
+	public byte[] loadWrappedKey(String hm, String section, String user) {
+		synchronized (fileLock) {
+			File keyFile = new File(KEYS_DIR + "key." + hm + "." + section + "." + user);
+			return secureReadFile(keyFile);
+		}
+	}
+
+	/**Devolve o owner de uma casa, ou null se não existir.*/
+	public String getOwner(String hm) {
+		synchronized (fileLock) {
+			List<String> lines = readAllLines(new File(HOUSES_FILE));
+			for (String line : lines) {
+				if (line.trim().isEmpty()) continue;
+				String[] parts = line.split("\\|", 3);
+				if (parts.length >= 2 && parts[0].equals(hm)) {
+					return parts[1];
+				}
+			}
+			return null;
+		}
+	}
+
+	/**Devolve todas as secções válidas.*/
+	public String[] getAllSections() {
+		return DEFAULT_SECTIONS.clone();
+	}
+
+	/**Devolve as secções em que o user tem permissão numa casa.*/
+	public List<String> getUserSections(String hm, String user) {
+		if (isOwner(hm, user)) {
+			return Arrays.asList(DEFAULT_SECTIONS);
+		}
+		synchronized (fileLock) {
+			File houseFile = new File(HOUSES_DIR + hm + ".txt");
+			List<String> lines = readAllLines(houseFile);
+			boolean inPermissions = false;
+			for (String line : lines) {
+				if (line.trim().equals("[permissions]")) { inPermissions = true; continue; }
+				if (line.trim().equals("[devices]")) break;
+				if (!inPermissions || line.trim().isEmpty()) continue;
+				String[] parts = line.split("\\|", 2);
+				if (parts.length == 2 && parts[0].equals(user)) {
+					String[] sections = parts[1].split(",");
+					for (String sec : sections) {
+						if (sec.trim().equals("all")) return Arrays.asList(DEFAULT_SECTIONS);
+					}
+					List<String> result = new ArrayList<>();
+					for (String sec : sections) result.add(sec.trim());
+					return result;
+				}
+			}
+			return new ArrayList<>();
 		}
 	}
 
