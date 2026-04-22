@@ -29,21 +29,13 @@
 
 ## B. Confidencialidade E2E — Comando CREATE
 
-### B1. `ClientCommandLoop.handleCreate()` — gerar chaves AES por secção
-- **Atual:** Envia `"CREATE <hm>"`, recebe e imprime resposta
-- **Falta (após receber `"OK"`):**
-  1. Gerar 6 chaves AES-128 (uma por secção: E, G, L, M, P, S) com `KeyGenerator.getInstance("AES")`
-  2. Fazer `wrap` de cada chave com a chave pública RSA do owner (a nossa)
-  3. Enviar ao servidor: `numKeys`, e para cada: `section` (String) + `wrappedKey.length` (int) + `wrappedKey` (bytes)
-  4. Receber confirmação do servidor
+### ✅ B1. `ClientCommandLoop.handleCreate()` — gerar chaves AES por secção
+- ~~**Atual:** Envia `"CREATE <hm>"`, recebe e imprime resposta~~
+- **FEITO:** Após receber "OK", gera 6 chaves AES-128, wrap com PublicKey RSA do owner, envia ao servidor, recebe confirmação
 
-### B2. `CommandService.handleCreate()` — receber e guardar chaves wrapped
-- **Atual:** Cria casa e envia `"OK"`
-- **Falta (após enviar `"OK"`):**
-  1. Receber `numKeys` (int) do cliente
-  2. Para cada: ler `section` (String) + `keyLen` (int) + `wrappedKey` (bytes)
-  3. Guardar via `repository.saveWrappedKey(hm, section, owner, wrappedKey)`
-  4. Enviar confirmação `"OK"`
+### ✅ B2. `CommandService.handleCreate()` — receber e guardar chaves wrapped
+- ~~**Atual:** Cria casa e envia `"OK"`~~
+- **FEITO:** Após enviar "OK", recebe numKeys + (section, keyLen, wrappedKey) × 6, guarda via `saveWrappedKey`, envia "OK" final
 
 ---
 

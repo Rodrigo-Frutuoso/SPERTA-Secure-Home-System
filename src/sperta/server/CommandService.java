@@ -65,6 +65,22 @@ public class CommandService {
 		repository.createHouse(hm, owner);
 		out.writeObject("OK");
 		out.flush();
+
+		// E2E: Receber chaves de secção wrapped com a chave pública do owner
+		try {
+			int numKeys = in.readInt();
+			for (int i = 0; i < numKeys; i++) {
+				String section = (String) in.readObject();
+				int keyLen = in.readInt();
+				byte[] wrappedKey = new byte[keyLen];
+				in.readFully(wrappedKey);
+				repository.saveWrappedKey(hm, section, owner, wrappedKey);
+			}
+			out.writeObject("OK");
+			out.flush();
+		} catch (ClassNotFoundException e) {
+			System.err.println("Erro ao receber chaves de secção: " + e.getMessage());
+		}
 	}
 
 	private void handleAdd(String user1, String hm, String s, String requester, ObjectInputStream in, ObjectOutputStream out)

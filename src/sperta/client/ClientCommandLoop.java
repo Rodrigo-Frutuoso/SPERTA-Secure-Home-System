@@ -135,6 +135,25 @@ public class ClientCommandLoop {
 		out.flush();
 		String response = (String) in.readObject();
 		System.out.println(response);
+
+		if ("OK".equals(response)) {
+			// E2E: Gerar chave AES-128 por secção e enviar wrapped com a nossa chave pública RSA
+			try {
+				out.writeInt(ALL_SECTIONS.length);
+				for (String section : ALL_SECTIONS) {
+					SecretKey sectionKey = generateAESKey();
+					byte[] wrappedKey = wrapKey(sectionKey, publicKey);
+					out.writeObject(section);
+					out.writeInt(wrappedKey.length);
+					out.write(wrappedKey);
+				}
+				out.flush();
+				String keysResponse = (String) in.readObject();
+				System.out.println("Chaves de secção: " + keysResponse);
+			} catch (Exception e) {
+				System.err.println("Erro ao gerar/enviar chaves de secção: " + e.getMessage());
+			}
+		}
 	}
 
 	private void handleAdd(String user1, String hm, String s) throws IOException, ClassNotFoundException {
