@@ -30,6 +30,7 @@ public class ClientSession {
 	public void authenticateAndRun(String user, String password, String truststore,
 			String truststorePassword, String keystore, String keystorePassword) {
 		// Configurar propriedades TLS antes de criar SSLSocket
+		System.setProperty("javax.net.ssl.trustStoreType", "PKCS12");
 		System.setProperty("javax.net.ssl.trustStore", truststore);
 		System.setProperty("javax.net.ssl.trustStorePassword", truststorePassword);
 
@@ -94,7 +95,7 @@ public class ClientSession {
 				System.out.println("OK-USER");
 			}
 
-			ClientCommandLoop commandLoop = new ClientCommandLoop(outStream, inStream, scanner, keystore, keystorePassword);
+			ClientCommandLoop commandLoop = new ClientCommandLoop(outStream, inStream, scanner, keystore, keystorePassword, truststore, truststorePassword);
 			commandLoop.run();
 		} catch (IOException e) {
 			System.err.println("Erro de comunicacao com o servidor: " + e.getMessage());
@@ -107,7 +108,7 @@ public class ClientSession {
 
 	private void sendCertificateToServer(String user, String keystorePath, String keystorePassword, ObjectOutputStream outStream) {
 		try {
-			KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+			KeyStore ks = KeyStore.getInstance("PKCS12");
 			try (FileInputStream fis = new FileInputStream(keystorePath)) {
 				ks.load(fis, keystorePassword.toCharArray());
 			}

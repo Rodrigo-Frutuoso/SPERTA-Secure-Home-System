@@ -35,12 +35,16 @@ public class ClientCommandLoop {
 	private final Scanner scanner;
 	private final PrivateKey privateKey;
 	private final PublicKey publicKey;
+	private final String truststorePath;
+	private final String truststorePassword;
 
 	public ClientCommandLoop(ObjectOutputStream out, ObjectInputStream in, Scanner scanner,
-			String keystorePath, String keystorePassword) {
+			String keystorePath, String keystorePassword, String truststorePath, String truststorePassword) {
 		this.out = out;
 		this.in = in;
 		this.scanner = scanner;
+		this.truststorePath = truststorePath;
+		this.truststorePassword = truststorePassword;
 		// Carregar chaves RSA da keystore do utilizador
 		PrivateKey privKey = null;
 		PublicKey pubKey = null;
@@ -171,6 +175,9 @@ public class ClientCommandLoop {
 				byte[] certBytes = new byte[certLen];
 				in.readFully(certBytes);
 				PublicKey user1PublicKey = extractPublicKeyFromCert(certBytes);
+
+				// Guardar certificado do user1 na truststore do cliente
+				saveCertToTruststore(user1, certBytes);
 
 				// Receber chaves wrapped do owner (nós)
 				int numSections = in.readInt();
@@ -418,5 +425,32 @@ public class ClientCommandLoop {
 		CertificateFactory cf = CertificateFactory.getInstance("X.509");
 		Certificate cert = cf.generateCertificate(new ByteArrayInputStream(certBytes));
 		return cert.getPublicKey();
+	}
+
+	/**Guarda o certificado de um utilizador na truststore do cliente.*/
+	private void saveCertToTruststore(String alias, byte[] certBytes) {
+		try {
+			CertificateFactory cf = CertificateFactory.getInstance("X.509");
+			Certificate cert = cf.generateCertificate(new ByteArrayInputStream(certBytes));
+
+			KeyStore ts = KeyStore.getInstance("PKCS12");
+			File tsFile = new File(truststorePath);
+			if (tsFile.exists()) {
+				try (FileInputStream fis = new FileInputStream(tsFile)) {
+					ts.load(fis, truststorePassword.toCharArray());
+				}
+			} else {
+				ts.load(null, truststorePassword.toCharArray());
+			}
+
+			ts.setCertificateEntry(alias, cert);
+
+			try (FileOutputStream fos = new FileOutputStream(tsFile)) {
+				ts.store(fos, truststorePassword.toCharArray());
+			}
+			System.out.println("Certificado de '" + alias + "' guardado na truststore.");
+		} catch (Exception e) {
+			System.err.println("Erro ao guardar certificado na truststore: " + e.getMessage());
+		}
 	}
 }

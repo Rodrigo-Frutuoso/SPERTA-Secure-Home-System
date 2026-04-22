@@ -43,6 +43,7 @@ public class DataRepository {
 	private static final String CERTS_DIR = SERVER_DATA_DIR + "certs/";
 	private static final String KEYS_DIR = SERVER_DATA_DIR + "keys/";
 	private static final String SALT_FILE = SERVER_DATA_DIR + "server.salt";
+	private static final String ATTESTATION_FILE = "src/sperta/server/attestation.txt";
 	private static final String[] DEFAULT_SECTIONS = { "E", "G", "L", "M", "P", "S" };
 
 	private static final String PBE_ALGORITHM = "PBEWithHmacSHA256AndAES_128";
@@ -53,6 +54,7 @@ public class DataRepository {
 	public DataRepository(String cipherPassword) {
 		initializeStorage();
 		this.pbeKey = initPBEKey(cipherPassword);
+		encryptAttestationIfNeeded();
 		verifyAllIntegrity();
 	}
 
@@ -79,6 +81,33 @@ public class DataRepository {
 			return salt;
 		} catch (IOException e) {
 			throw new RuntimeException("Erro ao gerir salt do servidor: " + e.getMessage(), e);
+		}
+	}
+
+	/**Cifra o attestation.txt com PBE na primeira execução após o build.
+	 * Se o .hash já existir, assume que já foi cifrado.*/
+	private void encryptAttestationIfNeeded() {
+		File file = new File(ATTESTATION_FILE);
+		if (!file.exists() || file.length() == 0) return;
+		File hashFile = new File(ATTESTATION_FILE + ".hash");
+		if (hashFile.exists()) return;
+		try {
+			byte[] plaintext = Files.readAllBytes(file.toPath());
+			if (plaintext.length == 0) return;
+			secureWriteFile(file, plaintext);
+			System.out.println("Ficheiro attestation.txt cifrado com PBE.");
+		} catch (IOException e) {
+			System.err.println("Erro ao cifrar attestation.txt: " + e.getMessage());
+		}
+	}
+
+	/**Lê e decifra o conteúdo do attestation.txt.*/
+	public String readAttestationContent() {
+		synchronized (fileLock) {
+			File file = new File(ATTESTATION_FILE);
+			byte[] content = secureReadFile(file);
+			if (content == null) return null;
+			return new String(content, StandardCharsets.UTF_8);
 		}
 	}
 
@@ -327,7 +356,7 @@ public class DataRepository {
 					File[] logFiles = houseDir.listFiles((d, name) -> name.endsWith(".csv"));
 					if (logFiles != null) {
 						for (File f : logFiles) {
-							verifyFileIntegrity(f);
+							verifyPlainFileIntegrity(f);
 						}
 					}
 				}
@@ -342,6 +371,7 @@ public class DataRepository {
 				}
 			}
 		}
+		verifyFileIntegrity(new File(ATTESTATION_FILE));
 	}
 
 	/**Verifica a integridade de um ficheiro cifrado.
@@ -358,6 +388,24 @@ public class DataRepository {
 		try {
 			byte[] encrypted = Files.readAllBytes(file.toPath());
 			byte[] plaintext = decryptBytes(encrypted);
+			if (!verifyHash(file, plaintext)) {
+				System.out.println("NOK-INTEGRITY");
+				System.exit(-1);
+			}
+		} catch (Exception e) {
+			System.out.println("NOK-INTEGRITY");
+			System.exit(-1);
+		}
+	}
+
+	/**Verifica a integridade de um ficheiro em claro (sem decifração PBE).
+	 * Usado para logs cujos dados já são cifrados E2E.*/
+	private void verifyPlainFileIntegrity(File file) {
+		if (!file.exists() || file.length() == 0) return;
+		File hashFile = new File(file.getPath() + ".hash");
+		if (!hashFile.exists()) return;
+		try {
+			byte[] plaintext = Files.readAllBytes(file.toPath());
 			if (!verifyHash(file, plaintext)) {
 				System.out.println("NOK-INTEGRITY");
 				System.exit(-1);

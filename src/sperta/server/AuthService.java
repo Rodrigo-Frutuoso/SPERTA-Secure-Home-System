@@ -5,6 +5,7 @@
 *
 ***************************************************************************/
 
+
 import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -18,7 +19,7 @@ import java.util.Set;
 
 public class AuthService {
 
-	private static final String ATTESTATION_FILE = "src/sperta/server/attestation.txt";
+
 	private final DataRepository repository;
 	private final Set<String> activeUsers;
 
@@ -174,14 +175,10 @@ public class AuthService {
 
 	private String readReferenceJarPath() {
 		try {
-			File attestationFile = new File(ATTESTATION_FILE);
-			byte[] encryptedContent = Files.readAllBytes(attestationFile.toPath());
-			if (encryptedContent.length == 0) {
+			String content = repository.readAttestationContent();
+			if (content == null || content.isEmpty()) {
 				return null;
 			}
-			// Para agora, ler em claro (o arquivo não está cifrado na primeira versão)
-			// TODO: Na próxima versão, decifrar com repository.secureReadFile()
-			String content = new String(encryptedContent, "UTF-8");
 			String[] lines = content.split("\n");
 			for (String line : lines) {
 				if (line.contains(":")) {
@@ -189,7 +186,7 @@ public class AuthService {
 					return parts[1].trim();
 				}
 			}
-		} catch (IOException e) {
+		} catch (Exception e) {
 			System.err.println("Erro ao ler attestation.txt: " + e.getMessage());
 		}
 		return null;
