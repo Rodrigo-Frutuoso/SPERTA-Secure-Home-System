@@ -107,10 +107,57 @@ public class CommandService {
 			out.flush();
 			return;
 		}
+		if (!repository.userHasCertificate(user1)) {
+			out.writeObject("NOK");
+			out.flush();
+			return;
+		}
 
-		repository.addPermission(hm, user1, "ALL".equals(section) ? "all" : section);
-		out.writeObject("OK");
-		out.flush();
+		// E2E: Enviar certificado do user1 e chaves wrapped do owner
+		try {
+			out.writeObject("OK-KEYS");
+			out.flush();
+
+			// Enviar certificado do user1
+			byte[] certBytes = repository.getUserCertificate(user1);
+			out.writeInt(certBytes.length);
+			out.write(certBytes);
+
+			// Determinar secções
+			String[] sections;
+			if ("ALL".equals(section)) {
+				sections = repository.getAllSections();
+			} else {
+				sections = new String[] { section };
+			}
+
+			// Enviar chaves wrapped do owner (requester) para cada secção
+			out.writeInt(sections.length);
+			for (String sec : sections) {
+				byte[] ownerWrappedKey = repository.loadWrappedKey(hm, sec, requester);
+				out.writeObject(sec);
+				out.writeInt(ownerWrappedKey.length);
+				out.write(ownerWrappedKey);
+			}
+			out.flush();
+
+			// Receber chaves re-wrapped para user1
+			int numKeys = in.readInt();
+			for (int i = 0; i < numKeys; i++) {
+				String sec = (String) in.readObject();
+				int keyLen = in.readInt();
+				byte[] user1WrappedKey = new byte[keyLen];
+				in.readFully(user1WrappedKey);
+				repository.saveWrappedKey(hm, sec, user1, user1WrappedKey);
+			}
+
+			// Adicionar permissão e confirmar
+			repository.addPermission(hm, user1, "ALL".equals(section) ? "all" : section);
+			out.writeObject("OK");
+			out.flush();
+		} catch (ClassNotFoundException e) {
+			System.err.println("Erro no protocolo ADD E2E: " + e.getMessage());
+		}
 	}
 
 	private void handleRD(String hm, String s, String requester, ObjectOutputStream out) throws IOException {

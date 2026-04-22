@@ -41,26 +41,13 @@
 
 ## C. Confidencialidade E2E — Comando ADD
 
-### C1. `CommandService.handleAdd()` — troca de chaves e certificado
-- **Atual:** Verifica permissões, adiciona permissão, envia `"OK"`
-- **Falta (em vez de enviar `"OK"` diretamente):**
-  1. Verificar se user1 tem certificado (`userHasCertificate`)
-  2. Enviar `"OK-KEYS"` em vez de `"OK"`
-  3. Enviar certificado do user1: `certBytes.length` (int) + `certBytes` (bytes)
-  4. Determinar secções (se `"ALL"` → 6 secções, senão → 1 secção)
-  5. Enviar `numSections` (int), e para cada: `section` (String) + `ownerWrappedKey.length` (int) + `ownerWrappedKey` (bytes)
-  6. Receber chaves re-wrapped para user1: `numKeys` (int), para cada: `section` + `keyLen` + `user1WrappedKey`
-  7. Guardar via `repository.saveWrappedKey(hm, section, user1, user1WrappedKey)`
-  8. Adicionar permissão e enviar `"OK"` final
+### ✅ C1. `CommandService.handleAdd()` — troca de chaves e certificado
+- ~~**Atual:** Verifica permissões, adiciona permissão, envia `"OK"`~~
+- **FEITO:** Verifica certificado user1, envia "OK-KEYS" + certBytes + wrapped keys do owner, recebe re-wrapped keys para user1, guarda-as, adiciona permissão, envia "OK" final
 
-### C2. `ClientCommandLoop.handleAdd()` — unwrap + re-wrap
-- **Atual:** Envia comando, recebe e imprime resposta
-- **Falta (quando resposta é `"OK-KEYS"`):**
-  1. Receber certificado do user1 → extrair `PublicKey` com `CertificateFactory.getInstance("X.509")`
-  2. Receber chaves wrapped do owner (para cada secção)
-  3. Para cada secção: `unwrap` com a nossa `PrivateKey` → chave AES em claro → `wrap` com `PublicKey` do user1
-  4. Enviar chaves re-wrapped ao servidor
-  5. Receber e imprimir confirmação final
+### ✅ C2. `ClientCommandLoop.handleAdd()` — unwrap + re-wrap
+- ~~**Atual:** Envia comando, recebe e imprime resposta~~
+- **FEITO:** Quando recebe "OK-KEYS": recebe cert do user1 → extrai PublicKey → recebe wrapped keys → unwrap com PrivateKey → re-wrap com PublicKey do user1 → envia ao servidor → recebe "OK" final
 
 ---
 

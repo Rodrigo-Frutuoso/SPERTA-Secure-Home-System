@@ -160,7 +160,43 @@ public class ClientCommandLoop {
 		out.writeObject("ADD " + user1 + " " + hm + " " + s);
 		out.flush();
 		String response = (String) in.readObject();
-		System.out.println(response);
+
+		if ("OK-KEYS".equals(response)) {
+			try {
+				// Receber certificado do user1
+				int certLen = in.readInt();
+				byte[] certBytes = new byte[certLen];
+				in.readFully(certBytes);
+				PublicKey user1PublicKey = extractPublicKeyFromCert(certBytes);
+
+				// Receber chaves wrapped do owner (nós)
+				int numSections = in.readInt();
+				out.writeInt(numSections);
+				for (int i = 0; i < numSections; i++) {
+					String section = (String) in.readObject();
+					int keyLen = in.readInt();
+					byte[] ownerWrappedKey = new byte[keyLen];
+					in.readFully(ownerWrappedKey);
+
+					// Unwrap com a nossa PrivateKey, re-wrap com PublicKey do user1
+					SecretKey sectionKey = unwrapKey(ownerWrappedKey, privateKey);
+					byte[] user1WrappedKey = wrapKey(sectionKey, user1PublicKey);
+
+					out.writeObject(section);
+					out.writeInt(user1WrappedKey.length);
+					out.write(user1WrappedKey);
+				}
+				out.flush();
+
+				// Receber confirmação final
+				String finalResponse = (String) in.readObject();
+				System.out.println(finalResponse);
+			} catch (Exception e) {
+				System.err.println("Erro na partilha de chaves ADD: " + e.getMessage());
+			}
+		} else {
+			System.out.println(response);
+		}
 	}
 
 	private void handleRD(String hm, String s) throws IOException, ClassNotFoundException {
