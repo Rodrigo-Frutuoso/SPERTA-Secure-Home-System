@@ -207,3 +207,11 @@ java -jar dist/SpertaClient.jar localhost:22345 src/sperta/certs/client.truststo
 # Limpar
 mvn clean
 ```
+
+---
+
+## 🔑 Passwords dos Utilizadores
+
+- `rodrigo`: `frutas`
+- `tiago`: `leite1`
+- `simao`: `alexandre`
