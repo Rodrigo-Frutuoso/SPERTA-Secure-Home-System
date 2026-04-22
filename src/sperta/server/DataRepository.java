@@ -85,17 +85,34 @@ public class DataRepository {
 	}
 
 	/**Cifra o attestation.txt com PBE na primeira execução após o build.
-	 * Se o .hash já existir, assume que já foi cifrado.*/
+	 * Se o build o reescrever em claro, recifra e renova o hash.*/
 	private void encryptAttestationIfNeeded() {
 		File file = new File(ATTESTATION_FILE);
 		if (!file.exists() || file.length() == 0) return;
-		File hashFile = new File(ATTESTATION_FILE + ".hash");
-		if (hashFile.exists()) return;
 		try {
-			byte[] plaintext = Files.readAllBytes(file.toPath());
-			if (plaintext.length == 0) return;
-			secureWriteFile(file, plaintext);
-			System.out.println("Ficheiro attestation.txt cifrado com PBE.");
+			byte[] raw = Files.readAllBytes(file.toPath());
+			if (raw.length == 0) return;
+
+			File hashFile = new File(ATTESTATION_FILE + ".hash");
+			boolean needsEncrypt = !hashFile.exists();
+
+			if (!needsEncrypt) {
+				try {
+					// Se já estiver cifrado e íntegro, não fazer nada.
+					byte[] plaintext = decryptBytes(raw);
+					if (!verifyHash(file, plaintext)) {
+						needsEncrypt = true;
+					}
+				} catch (Exception e) {
+					// Ficheiro provavelmente em claro (reescrito pelo build): recifrar.
+					needsEncrypt = true;
+				}
+			}
+
+			if (needsEncrypt) {
+				secureWriteFile(file, raw);
+				System.out.println("Ficheiro attestation.txt cifrado com PBE.");
+			}
 		} catch (IOException e) {
 			System.err.println("Erro ao cifrar attestation.txt: " + e.getMessage());
 		}

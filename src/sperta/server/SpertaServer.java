@@ -25,18 +25,29 @@ public class SpertaServer {
 	}
 
 	public static void main(String[] args) {
-		if (args.length < 4) {
-			System.out.println("Uso: SpertaServer <port> <cipher-password> <keystore> <keystore-password>");
+		if (args.length < 3) {
+			System.out.println("Uso: SpertaServer [port] <cipher-password> <keystore> <keystore-password>");
 			return;
 		}
 
-		int port = Integer.parseInt(args[0]);
-		String cipherPassword = args[1];
-		String keystorePath = args[2];
-		String keystorePassword = args[3];
+		int port = DEFAULT_PORT;
+		String cipherPassword;
+		String keystorePath;
+		String keystorePassword;
+
+		if (args.length == 3) {
+			cipherPassword = args[0];
+			keystorePath = args[1];
+			keystorePassword = args[2];
+		} else {
+			port = Integer.parseInt(args[0]);
+			cipherPassword = args[1];
+			keystorePath = args[2];
+			keystorePassword = args[3];
+		}
 
 		// Codigo da TP
-		System.setProperty("javax.net.ssl.keyStoreType", "PKCS12");
+		System.setProperty("javax.net.ssl.keyStoreType", "JKS");
 		System.setProperty("javax.net.ssl.keyStore", keystorePath);
 		System.setProperty("javax.net.ssl.keyStorePassword", keystorePassword);
 

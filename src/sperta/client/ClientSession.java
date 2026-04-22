@@ -30,7 +30,7 @@ public class ClientSession {
 	public void authenticateAndRun(String user, String password, String truststore,
 			String truststorePassword, String keystore, String keystorePassword) {
 		// Configurar propriedades TLS antes de criar SSLSocket
-		System.setProperty("javax.net.ssl.trustStoreType", "PKCS12");
+		System.setProperty("javax.net.ssl.trustStoreType", "JKS");
 		System.setProperty("javax.net.ssl.trustStore", truststore);
 		System.setProperty("javax.net.ssl.trustStorePassword", truststorePassword);
 
@@ -108,7 +108,7 @@ public class ClientSession {
 
 	private void sendCertificateToServer(String user, String keystorePath, String keystorePassword, ObjectOutputStream outStream) {
 		try {
-			KeyStore ks = KeyStore.getInstance("PKCS12");
+			KeyStore ks = KeyStore.getInstance("JKS");
 			try (FileInputStream fis = new FileInputStream(keystorePath)) {
 				ks.load(fis, keystorePassword.toCharArray());
 			}

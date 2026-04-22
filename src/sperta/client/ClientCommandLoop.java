@@ -49,7 +49,7 @@ public class ClientCommandLoop {
 		PrivateKey privKey = null;
 		PublicKey pubKey = null;
 		try {
-			KeyStore ks = KeyStore.getInstance("PKCS12");
+			KeyStore ks = KeyStore.getInstance("JKS");
 			try (FileInputStream fis = new FileInputStream(keystorePath)) {
 				ks.load(fis, keystorePassword.toCharArray());
 			}
@@ -294,13 +294,9 @@ public class ClientCommandLoop {
 								if (parts.length == 3) decrypted.append("|").append(parts[2]);
 								decrypted.append("\n");
 							} catch (Exception e) {
-								decrypted.append(line).append("\n");
+								// Ignorar linhas que não possam ser decifradas com a chave recebida.
 							}
-						} else {
-							decrypted.append(line).append("\n");
 						}
-					} else {
-						decrypted.append(line).append("\n");
 					}
 				}
 
@@ -354,10 +350,8 @@ public class ClientCommandLoop {
 							if (parts.length == 3) decrypted.append(",").append(parts[2]);
 							decrypted.append("\n");
 						} catch (Exception e) {
-							decrypted.append(line).append("\n");
+							// Ignorar linhas que não possam ser decifradas com a chave recebida.
 						}
-					} else {
-						decrypted.append(line).append("\n");
 					}
 				}
 
@@ -433,7 +427,7 @@ public class ClientCommandLoop {
 			CertificateFactory cf = CertificateFactory.getInstance("X.509");
 			Certificate cert = cf.generateCertificate(new ByteArrayInputStream(certBytes));
 
-			KeyStore ts = KeyStore.getInstance("PKCS12");
+			KeyStore ts = KeyStore.getInstance("JKS");
 			File tsFile = new File(truststorePath);
 			if (tsFile.exists()) {
 				try (FileInputStream fis = new FileInputStream(tsFile)) {

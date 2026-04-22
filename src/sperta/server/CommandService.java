@@ -7,6 +7,11 @@
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class CommandService {
 
@@ -257,25 +262,76 @@ public class CommandService {
 			return;
 		}
 
-		out.writeObject("OK");
-
-		// E2E: Enviar chaves wrapped das secções do utilizador
-		java.util.List<String> userSections = repository.getUserSections(hm, requester);
-		out.writeInt(userSections.size());
+		List<String> userSections = repository.getUserSections(hm, requester);
+		List<String> sectionsWithKey = new ArrayList<>();
 		for (String sec : userSections) {
 			byte[] wrappedKey = repository.loadWrappedKey(hm, sec, requester);
-			out.writeObject(sec);
-			if (wrappedKey != null) {
-				out.writeInt(wrappedKey.length);
-				out.write(wrappedKey);
-			} else {
-				out.writeInt(0);
+			if (wrappedKey != null && wrappedKey.length > 0) {
+				sectionsWithKey.add(sec);
 			}
 		}
 
-		out.writeLong(data.length);
-		out.write(data);
+		if (sectionsWithKey.isEmpty()) {
+			out.writeObject("NOPERM");
+			out.flush();
+			return;
+		}
+
+		Set<String> allowedSections = new HashSet<>();
+		for (String sec : sectionsWithKey) {
+			allowedSections.add(sec.trim().toUpperCase());
+		}
+
+		byte[] filteredData = filterStateDataBySections(hm, data, allowedSections);
+		if (filteredData.length == 0) {
+			out.writeObject("NODATA");
+			out.flush();
+			return;
+		}
+
+		out.writeObject("OK");
+
+		// E2E: Enviar apenas chaves wrapped que poderão decifrar dados enviados
+		out.writeInt(sectionsWithKey.size());
+		for (String sec : sectionsWithKey) {
+			byte[] wrappedKey = repository.loadWrappedKey(hm, sec, requester);
+			out.writeObject(sec);
+			out.writeInt(wrappedKey.length);
+			out.write(wrappedKey);
+		}
+
+		out.writeLong(filteredData.length);
+		out.write(filteredData);
 		out.flush();
+	}
+
+	private byte[] filterStateDataBySections(String hm, byte[] stateData, Set<String> allowedSections) {
+		String text = new String(stateData, StandardCharsets.UTF_8);
+		String[] lines = text.split("\n");
+		StringBuilder filtered = new StringBuilder();
+
+		for (String line : lines) {
+			if (line == null || line.trim().isEmpty()) {
+				continue;
+			}
+
+			String[] parts = line.split("\\|", 3);
+			if (parts.length < 2) {
+				continue;
+			}
+
+			String device = parts[0].trim().toUpperCase();
+			String section = repository.getDeviceSection(hm, device);
+			if (section == null || section.trim().isEmpty()) {
+				section = device.replaceAll("[0-9]", "");
+			}
+
+			if (section != null && allowedSections.contains(section.trim().toUpperCase())) {
+				filtered.append(line).append("\n");
+			}
+		}
+
+		return filtered.toString().getBytes(StandardCharsets.UTF_8);
 	}
 
 	private void handleRH(String hm, String d, String requester, ObjectOutputStream out) throws IOException {

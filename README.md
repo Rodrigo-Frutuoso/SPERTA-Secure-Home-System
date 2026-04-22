@@ -1,6 +1,6 @@
 # 🏠 SPERTA
 
-> **Segurança e Confiabilidade 2025/26 — Projeto 1 (Fase 1)**  
+> **Segurança e Confiabilidade 2025/26 — Projeto 1 (Fase 2)**  
 > Sistema de gestão de dispositivos domésticos com autenticação, atestação e controlo de acesso por utilizador.
 
 ---
@@ -27,7 +27,7 @@ O Maven irá:
 - Gerar os JARs em `dist/`:
   - `dist/SpertaClient.jar`
   - `dist/SpertaServer.jar`
-- Atualizar `src/sperta/server/attestation.txt` com o tamanho do `SpertaClient.jar`
+- Atualizar `src/sperta/server/attestation.txt` com o caminho da cópia de referência do `SpertaClient.jar`
 
 ---
 
@@ -72,9 +72,9 @@ O servidor e o cliente podem correr em máquinas distintas na mesma rede.
 Os ficheiros `dist/SpertaServer.jar` e `dist/SpertaClient.jar` já vêm **pré-compilados** no projeto — **não é necessário compilar**.
 
 > [!IMPORTANT]
-> **Atestação:** o servidor valida o tamanho do `SpertaClient.jar`.
+> **Atestação:** o servidor valida o hash SHA-256 de `SpertaClient.jar`.
 > Ambos os PCs devem usar o **mesmo** `SpertaClient.jar` (o que vem na pasta `dist/`).
-> **Nunca recompilar separadamente** em cada PC, pois os JARs podem ficar com tamanhos diferentes e a atestação falha.
+> **Nunca recompilar separadamente** em cada PC, pois os JARs podem diferir e a atestação falha.
 
 ### Passo a passo
 
@@ -155,7 +155,7 @@ Os ficheiros `dist/SpertaServer.jar` e `dist/SpertaClient.jar` já vêm **pré-c
 │       ├── CryptoUtils.java          # Funções de hash, base64 e crypto
 │       ├── DataRepository.java       # Persistência e ficheiros
 │       ├── SpertaServer.java         # Ponto de entrada do servidor
-│       └── attestation.txt           # Nome e tamanho esperado do JAR do cliente
+│       └── attestation.txt           # Path da cópia de referência do JAR do cliente
 │
 ├── pom.xml
 └── README.md
