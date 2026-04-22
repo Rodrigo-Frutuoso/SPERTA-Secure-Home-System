@@ -16,6 +16,9 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
+import java.util.Base64;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 import javax.crypto.Cipher;
 import javax.crypto.KeyGenerator;
@@ -244,15 +247,65 @@ public class ClientCommandLoop {
 		out.flush();
 		String response = (String) in.readObject();
 		if ("OK".equals(response)) {
-			long size = in.readLong();
-			byte[] data = new byte[(int) size];
-			in.readFully(data);
-			String fileName = hm + "_states.txt";
-			String outputPath = resolveOutputPath(fileName);
-			try (FileOutputStream fos = new FileOutputStream(outputPath)) {
-				fos.write(data);
+			try {
+				// E2E: Receber chaves wrapped por secção
+				int numKeys = in.readInt();
+				Map<String, SecretKey> sectionKeys = new HashMap<>();
+				for (int i = 0; i < numKeys; i++) {
+					String sec = (String) in.readObject();
+					int keyLen = in.readInt();
+					if (keyLen > 0) {
+						byte[] wrappedKey = new byte[keyLen];
+						in.readFully(wrappedKey);
+						sectionKeys.put(sec, unwrapKey(wrappedKey, privateKey));
+					}
+				}
+
+				// Receber dados
+				long size = in.readLong();
+				byte[] data = new byte[(int) size];
+				in.readFully(data);
+
+				// Decifrar cada linha: device|encB64|timestamp
+				String text = new String(data, "UTF-8");
+				String[] lines = text.split("\n");
+				StringBuilder decrypted = new StringBuilder();
+				for (String line : lines) {
+					if (line.trim().isEmpty()) continue;
+					String[] parts = line.split("\\|", 3);
+					if (parts.length >= 2) {
+						String deviceName = parts[0];
+						// Inferir secção do nome do device (ex: "E1" → "E")
+						String sec = deviceName.replaceAll("[0-9]", "");
+						SecretKey key = sectionKeys.get(sec);
+						if (key != null) {
+							try {
+								byte[] encBytes = Base64.getDecoder().decode(parts[1]);
+								byte[] plainBytes = decryptAES(encBytes, key);
+								String plainVal = new String(plainBytes);
+								decrypted.append(deviceName).append("|").append(plainVal);
+								if (parts.length == 3) decrypted.append("|").append(parts[2]);
+								decrypted.append("\n");
+							} catch (Exception e) {
+								decrypted.append(line).append("\n");
+							}
+						} else {
+							decrypted.append(line).append("\n");
+						}
+					} else {
+						decrypted.append(line).append("\n");
+					}
+				}
+
+				String fileName = hm + "_states.txt";
+				String outputPath = resolveOutputPath(fileName);
+				try (FileOutputStream fos = new FileOutputStream(outputPath)) {
+					fos.write(decrypted.toString().getBytes("UTF-8"));
+				}
+				System.out.println("OK. Estados decifrados guardados em " + outputPath);
+			} catch (Exception e) {
+				System.err.println("Erro ao decifrar estados RT: " + e.getMessage());
 			}
-			System.out.println("OK, " + size + " (long), seguido de " + size + " bytes de dados. Estados guardados em " + outputPath);
 		} else {
 			System.out.println(response);
 		}
@@ -263,15 +316,53 @@ public class ClientCommandLoop {
 		out.flush();
 		String response = (String) in.readObject();
 		if ("OK".equals(response)) {
-			long size = in.readLong();
-			byte[] data = new byte[(int) size];
-			in.readFully(data);
-			String fileName = hm + "_" + d + ".csv";
-			String outputPath = resolveOutputPath(fileName);
-			try (FileOutputStream fos = new FileOutputStream(outputPath)) {
-				fos.write(data);
+			try {
+				// E2E: Receber chave wrapped da secção
+				int keyLen = in.readInt();
+				SecretKey sectionKey = null;
+				if (keyLen > 0) {
+					byte[] wrappedKey = new byte[keyLen];
+					in.readFully(wrappedKey);
+					sectionKey = unwrapKey(wrappedKey, privateKey);
+				}
+
+				// Receber dados
+				long size = in.readLong();
+				byte[] data = new byte[(int) size];
+				in.readFully(data);
+
+				// Decifrar cada linha CSV: device,encB64,timestamp
+				String text = new String(data, "UTF-8");
+				String[] lines = text.split("\n");
+				StringBuilder decrypted = new StringBuilder();
+				for (String line : lines) {
+					if (line.trim().isEmpty()) continue;
+					String[] parts = line.split(",", 3);
+					if (parts.length >= 2 && sectionKey != null) {
+						try {
+							byte[] encBytes = Base64.getDecoder().decode(parts[1]);
+							byte[] plainBytes = decryptAES(encBytes, sectionKey);
+							String plainVal = new String(plainBytes);
+							decrypted.append(parts[0]).append(",").append(plainVal);
+							if (parts.length == 3) decrypted.append(",").append(parts[2]);
+							decrypted.append("\n");
+						} catch (Exception e) {
+							decrypted.append(line).append("\n");
+						}
+					} else {
+						decrypted.append(line).append("\n");
+					}
+				}
+
+				String fileName = hm + "_" + d + ".csv";
+				String outputPath = resolveOutputPath(fileName);
+				try (FileOutputStream fos = new FileOutputStream(outputPath)) {
+					fos.write(decrypted.toString().getBytes("UTF-8"));
+				}
+				System.out.println("OK. Historico decifrado guardado em " + outputPath);
+			} catch (Exception e) {
+				System.err.println("Erro ao decifrar historico RH: " + e.getMessage());
 			}
-			System.out.println("OK, " + size + " (long), seguido de " + size + " bytes de dados. Historico guardado em " + outputPath);
 		} else {
 			System.out.println(response);
 		}

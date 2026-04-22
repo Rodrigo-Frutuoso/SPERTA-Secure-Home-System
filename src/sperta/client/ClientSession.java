@@ -107,7 +107,7 @@ public class ClientSession {
 
 	private void sendCertificateToServer(String user, String keystorePath, String keystorePassword, ObjectOutputStream outStream) {
 		try {
-			KeyStore ks = KeyStore.getInstance("JKS");
+			KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
 			try (FileInputStream fis = new FileInputStream(keystorePath)) {
 				ks.load(fis, keystorePassword.toCharArray());
 			}

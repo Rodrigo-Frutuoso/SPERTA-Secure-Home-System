@@ -65,56 +65,29 @@
 
 ## E. Confidencialidade E2E — Comandos RT e RH
 
-### E1. `CommandService.handleRT()` — enviar chaves wrapped junto com dados
-- **Atual:** Envia `"OK"` + `data.length` (long) + `data` (bytes)
-- **Falta (entre `"OK"` e os dados):**
-  1. Obter secções do utilizador: `repository.getUserSections(hm, requester)`
-  2. Enviar `numKeys` (int), e para cada secção: `section` (String) + `wrappedKey.length` (int) + `wrappedKey` (bytes)
-  3. Depois enviar os dados (como já faz)
+### ✅ E1. `CommandService.handleRT()` — enviar chaves wrapped junto com dados
+- ~~**Atual:** Envia `"OK"` + `data.length` (long) + `data` (bytes)~~
+- **FEITO:** Envia "OK" + wrapped keys por secção (numKeys, section, keyLen, wrappedKey) + data
 
-### E2. `ClientCommandLoop.handleRT()` — decifrar estados
-- **Atual:** Recebe dados e guarda em ficheiro em claro
-- **Falta (após receber `"OK"`):**
-  1. Receber chaves wrapped por secção → `unwrap` cada uma
-  2. Receber dados
-  3. Para cada linha: extrair nome do device, inferir secção (ex: `"E1"` → secção `"E"`), decifrar valor Base64 com a chave AES da secção
-  4. Guardar resultado decifrado no ficheiro
+### ✅ E2. `ClientCommandLoop.handleRT()` — decifrar estados
+- ~~**Atual:** Recebe dados e guarda em ficheiro em claro~~
+- **FEITO:** Recebe wrapped keys → unwrap → recebe dados → decifra cada linha (Base64→AES decrypt) → guarda decifrado
 
-### E3. `CommandService.handleRH()` — enviar chave wrapped junto com log
-- **Atual:** Envia `"OK"` + `data.length` (long) + `data` (bytes)
-- **Falta (entre `"OK"` e os dados):**
-  1. Carregar chave da secção: `repository.loadWrappedKey(hm, section, requester)`
-  2. Enviar `wrappedKey.length` (int) + `wrappedKey` (bytes)
-  3. Depois enviar os dados (como já faz)
+### ✅ E3. `CommandService.handleRH()` — enviar chave wrapped junto com log
+- ~~**Atual:** Envia `"OK"` + `data.length` (long) + `data` (bytes)~~
+- **FEITO:** Envia "OK" + wrapped key da secção do device + data
 
-### E4. `ClientCommandLoop.handleRH()` — decifrar histórico
-- **Atual:** Recebe dados e guarda em ficheiro em claro
-- **Falta (após receber `"OK"`):**
-  1. Receber chave wrapped → `unwrap`
-  2. Receber dados CSV
-  3. Para cada linha do CSV: decifrar valor Base64 com a chave AES
-  4. Guardar resultado decifrado no ficheiro
+### ✅ E4. `ClientCommandLoop.handleRH()` — decifrar histórico
+- ~~**Atual:** Recebe dados e guarda em ficheiro em claro~~
+- **FEITO:** Recebe wrapped key → unwrap → recebe dados CSV → decifra valor Base64 de cada linha → guarda decifrado
 
 ---
 
 ## F. Métodos auxiliares necessários no `ClientCommandLoop`
 
-### F1. `wrapKey(SecretKey, PublicKey)` → `byte[]`
-```
-Cipher c = Cipher.getInstance("RSA");
-c.init(Cipher.WRAP_MODE, publicKey);
-return c.wrap(secretKey);
-```
-
-### F2. `unwrapKey(byte[], PrivateKey)` → `SecretKey`
-```
-Cipher c = Cipher.getInstance("RSA");
-c.init(Cipher.UNWRAP_MODE, privateKey);
-return (SecretKey) c.unwrap(wrappedKey, "AES", Cipher.SECRET_KEY);
-```
-
-### F3. `loadPrivateKey(keystorePath, keystorePassword)` → `PrivateKey`
-### F4. `loadPublicKey(keystorePath, keystorePassword)` → `PublicKey`
+### ✅ F1-F4 — Todos implementados em A3
+- `wrapKey`, `unwrapKey`, `encryptAES`, `decryptAES`, `extractPublicKeyFromCert`, `generateAESKey`
+- PrivateKey/PublicKey carregados no construtor do ClientCommandLoop
 
 ---
 

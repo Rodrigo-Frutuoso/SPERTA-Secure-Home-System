@@ -258,6 +258,21 @@ public class CommandService {
 		}
 
 		out.writeObject("OK");
+
+		// E2E: Enviar chaves wrapped das secções do utilizador
+		java.util.List<String> userSections = repository.getUserSections(hm, requester);
+		out.writeInt(userSections.size());
+		for (String sec : userSections) {
+			byte[] wrappedKey = repository.loadWrappedKey(hm, sec, requester);
+			out.writeObject(sec);
+			if (wrappedKey != null) {
+				out.writeInt(wrappedKey.length);
+				out.write(wrappedKey);
+			} else {
+				out.writeInt(0);
+			}
+		}
+
 		out.writeLong(data.length);
 		out.write(data);
 		out.flush();
@@ -297,6 +312,16 @@ public class CommandService {
 		}
 
 		out.writeObject("OK");
+
+		// E2E: Enviar chave wrapped da secção do device
+		byte[] wrappedKey = repository.loadWrappedKey(hm, section, requester);
+		if (wrappedKey != null) {
+			out.writeInt(wrappedKey.length);
+			out.write(wrappedKey);
+		} else {
+			out.writeInt(0);
+		}
+
 		out.writeLong(data.length);
 		out.write(data);
 		out.flush();
