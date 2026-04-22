@@ -5,14 +5,12 @@
 *
 ***************************************************************************/
 
-import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.util.HashSet;
@@ -160,7 +158,7 @@ public class AuthService {
 	private byte[] computeAttestationHash(long nonce) {
 		try {
 			String jarPath = readReferenceJarPath();
-			byte[] jarBytes = Files.readAllBytes(Path.of(jarPath));
+			byte[] jarBytes = Files.readAllBytes(new File(jarPath).toPath());
 
 			MessageDigest md = MessageDigest.getInstance("SHA-256");
 			ByteBuffer bb = ByteBuffer.allocate(8);
@@ -175,11 +173,21 @@ public class AuthService {
 	}
 
 	private String readReferenceJarPath() {
-		try (BufferedReader reader = new BufferedReader(new FileReader(ATTESTATION_FILE))) {
-			String line = reader.readLine();
-			if (line != null && line.contains(":")) {
-				String[] parts = line.split(":", 2);
-				return parts[1].trim();
+		try {
+			File attestationFile = new File(ATTESTATION_FILE);
+			byte[] encryptedContent = Files.readAllBytes(attestationFile.toPath());
+			if (encryptedContent.length == 0) {
+				return null;
+			}
+			// Para agora, ler em claro (o arquivo não está cifrado na primeira versão)
+			// TODO: Na próxima versão, decifrar com repository.secureReadFile()
+			String content = new String(encryptedContent, "UTF-8");
+			String[] lines = content.split("\n");
+			for (String line : lines) {
+				if (line.contains(":")) {
+					String[] parts = line.split(":", 2);
+					return parts[1].trim();
+				}
 			}
 		} catch (IOException e) {
 			System.err.println("Erro ao ler attestation.txt: " + e.getMessage());

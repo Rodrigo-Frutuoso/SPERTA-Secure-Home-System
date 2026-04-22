@@ -190,6 +190,49 @@ public class DataRepository {
 		}
 	}
 
+	/**Escreve o conteúdo em claro (SEM cifração PBE) e guarda hash SHA-256 de integridade.
+	 * Usado para ficheiros de log que devem estar acessíveis.*/
+	private void plainWriteFile(File file, byte[] plaintext) {
+		try {
+			File parent = file.getParentFile();
+			if (parent != null && !parent.exists()) {
+				parent.mkdirs();
+			}
+			Files.write(file.toPath(), plaintext);
+			writeHash(file, plaintext);
+		} catch (RuntimeException e) {
+			throw e;
+		} catch (Exception e) {
+			throw new RuntimeException("Erro ao escrever ficheiro em claro: " + e.getMessage(), e);
+		}
+	}
+
+	/**Lê o ficheiro em claro (SEM decifração PBE) e verifica a integridade SHA-256.
+	 * Se a integridade falhar, imprime NOK-INTEGRITY e termina o servidor.*/
+	private byte[] plainReadFile(File file) {
+		if (!file.exists()) {
+			return null;
+		}
+		try {
+			byte[] plaintext = Files.readAllBytes(file.toPath());
+			if (plaintext.length == 0) {
+				return null;
+			}
+			if (!verifyHash(file, plaintext)) {
+				System.out.println("NOK-INTEGRITY");
+				System.exit(-1);
+			}
+			return plaintext;
+		} catch (RuntimeException e) {
+			System.out.println("NOK-INTEGRITY");
+			System.exit(-1);
+			return null;
+		} catch (IOException e) {
+			System.out.println("NOK-INTEGRITY");
+			System.exit(-1);
+			return null;
+		}
+	}
 
 	/**Lê e decifra um ficheiro, devolvendo as linhas de texto.
 	 * Se o ficheiro não existir, devolve uma lista vazia.*/
@@ -223,6 +266,37 @@ public class DataRepository {
 		secureWriteFile(file, sb.toString().getBytes(StandardCharsets.UTF_8));
 	}
 
+	/**Lê as linhas de um ficheiro em claro (SEM decifração PBE).
+	 * Se o ficheiro não existir, devolve uma lista vazia.*/
+	private List<String> plainReadAllLines(File file) {
+		List<String> lines = new ArrayList<>();
+		byte[] content = plainReadFile(file);
+		if (content == null || content.length == 0) {
+			return lines;
+		}
+		String text = new String(content, StandardCharsets.UTF_8);
+		String[] splitLines = text.split("\n", -1);
+		for (String line : splitLines) {
+			if (line.endsWith("\r")) {
+				line = line.substring(0, line.length() - 1);
+			}
+			lines.add(line);
+		}
+		while (!lines.isEmpty() && lines.get(lines.size() - 1).isEmpty()) {
+			lines.remove(lines.size() - 1);
+		}
+		return lines;
+	}
+
+	/**Serializa as linhas e escreve no ficheiro em claro (SEM cifração PBE)
+	 * juntamente com o hash de integridade.*/
+	private void plainWriteAllLines(File file, List<String> lines) {
+		StringBuilder sb = new StringBuilder();
+		for (String line : lines) {
+			sb.append(line).append("\n");
+		}
+		plainWriteFile(file, sb.toString().getBytes(StandardCharsets.UTF_8));
+	}
 
 	private void verifyAllIntegrity() {
 		verifyFileIntegrity(new File(USER_FILE));
@@ -688,9 +762,9 @@ public class DataRepository {
 			File logsHouseDir = new File(LOGS_DIR + hm);
 			if (!logsHouseDir.exists()) logsHouseDir.mkdirs();
 			File logFile = new File(LOGS_DIR + hm + "/" + device + ".csv");
-			List<String> logLines = readAllLines(logFile);
+			List<String> logLines = plainReadAllLines(logFile);
 			logLines.add(device + "," + encryptedValB64 + "," + timestamp);
-			writeAllLines(logFile, logLines);
+			plainWriteAllLines(logFile, logLines);
 		}
 	}
 
@@ -704,7 +778,7 @@ public class DataRepository {
 	public byte[] readDeviceLog(String hm, String device) throws IOException {
 		synchronized (fileLock) {
 			File logFile = new File(LOGS_DIR + hm + "/" + device + ".csv");
-			return secureReadFile(logFile);
+			return plainReadFile(logFile);
 		}
 	}
 

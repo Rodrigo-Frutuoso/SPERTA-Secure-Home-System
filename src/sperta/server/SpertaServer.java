@@ -36,6 +36,7 @@ public class SpertaServer {
 		String keystorePassword = args[3];
 
 		// Codigo da TP
+		System.setProperty("javax.net.ssl.keyStoreType", "PKCS12");
 		System.setProperty("javax.net.ssl.keyStore", keystorePath);
 		System.setProperty("javax.net.ssl.keyStorePassword", keystorePassword);
 

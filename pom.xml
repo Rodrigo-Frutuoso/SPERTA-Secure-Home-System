@@ -11,7 +11,8 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.release>21</maven.compiler.release>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
         <client.main.class>SpertaClient</client.main.class>
         <server.main.class>SpertaServer</server.main.class>
     </properties>
@@ -38,14 +39,16 @@
                                 <javac srcdir="${project.basedir}/src/sperta/client"
                                        destdir="${project.basedir}/out-client"
                                        includeantruntime="false"
-                                        release="${maven.compiler.release}">
+                                       source="${maven.compiler.source}"
+                                       target="${maven.compiler.target}">
                                     <include name="**/*.java"/>
                                 </javac>
 
                                 <javac srcdir="${project.basedir}/src/sperta/server"
                                        destdir="${project.basedir}/out-server"
                                        includeantruntime="false"
-                                        release="${maven.compiler.release}">
+                                       source="${maven.compiler.source}"
+                                       target="${maven.compiler.target}">
                                     <include name="**/*.java"/>
                                 </javac>
 
