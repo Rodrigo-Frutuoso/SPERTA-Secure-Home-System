@@ -94,7 +94,7 @@ public class ClientSession {
 				System.out.println("OK-USER");
 			}
 
-			ClientCommandLoop commandLoop = new ClientCommandLoop(outStream, inStream, scanner);
+			ClientCommandLoop commandLoop = new ClientCommandLoop(outStream, inStream, scanner, keystore, keystorePassword);
 			commandLoop.run();
 		} catch (IOException e) {
 			System.err.println("Erro de comunicacao com o servidor: " + e.getMessage());

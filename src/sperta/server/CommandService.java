@@ -5,6 +5,7 @@
 ***************************************************************************/
 
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
 public class CommandService {
@@ -15,18 +16,18 @@ public class CommandService {
 		this.repository = repository;
 	}
 
-	public void handleCommand(String command, String requester, ObjectOutputStream out) throws IOException {
+	public void handleCommand(String command, String requester, ObjectInputStream in, ObjectOutputStream out) throws IOException {
 		String[] parts = command.split("\\s+");
 		String cmd = parts[0].toUpperCase();
 		boolean ok;
 		switch (cmd) {
 			case "CREATE":
 				ok = parts.length >= 2;
-				if (ok) handleCreate(parts[1], requester, out);
+				if (ok) handleCreate(parts[1], requester, in, out);
 				break;
 			case "ADD":
 				ok = parts.length >= 4;
-				if (ok) handleAdd(parts[1], parts[2], parts[3], requester, out);
+				if (ok) handleAdd(parts[1], parts[2], parts[3], requester, in, out);
 				break;
 			case "RD":
 				ok = parts.length >= 3;
@@ -34,7 +35,7 @@ public class CommandService {
 				break;
 			case "EC":
 				ok = parts.length >= 4;
-				if (ok) handleEC(parts[1], parts[2], parts[3], requester, out);
+				if (ok) handleEC(parts[1], parts[2], parts[3], requester, in, out);
 				break;
 			case "RT":
 				ok = parts.length >= 2;
@@ -55,7 +56,7 @@ public class CommandService {
 		}
 	}
 
-	private void handleCreate(String hm, String owner, ObjectOutputStream out) throws IOException {
+	private void handleCreate(String hm, String owner, ObjectInputStream in, ObjectOutputStream out) throws IOException {
 		if (repository.houseExists(hm)) {
 			out.writeObject("NOK");
 			out.flush();
@@ -66,7 +67,7 @@ public class CommandService {
 		out.flush();
 	}
 
-	private void handleAdd(String user1, String hm, String s, String requester, ObjectOutputStream out)
+	private void handleAdd(String user1, String hm, String s, String requester, ObjectInputStream in, ObjectOutputStream out)
 			throws IOException {
 		String section = s == null ? "" : s.trim().toUpperCase();
 		if (!"ALL".equals(section) && !repository.isValidSection(section)) {
@@ -120,7 +121,7 @@ public class CommandService {
 		out.flush();
 	}
 
-	private void handleEC(String hm, String d, String intVal, String requester, ObjectOutputStream out)
+	private void handleEC(String hm, String d, String intVal, String requester, ObjectInputStream in, ObjectOutputStream out)
 			throws IOException {
 		String device = d == null ? "" : d.trim().toUpperCase();
 		if (device.isEmpty()) {

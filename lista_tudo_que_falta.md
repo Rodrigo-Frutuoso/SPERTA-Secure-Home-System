@@ -4,25 +4,26 @@
 
 ## A. Infraestrutura (pré-requisitos para o E2E)
 
-### A1. `CommandService.java` — precisa de receber `ObjectInputStream`
-- **Atual:** `handleCommand(String command, String requester, ObjectOutputStream out)` — só envia, não recebe
-- **Falta:** Adicionar `ObjectInputStream in` ao `handleCommand()` e a `handleCreate()`, `handleAdd()`, `handleEC()`
-- **Motivo:** CREATE, ADD e EC precisam de receber dados cifrados do cliente (chaves wrapped, valores cifrados)
+### ✅ A1. `CommandService.java` — precisa de receber `ObjectInputStream`
+- ~~**Atual:** `handleCommand(String command, String requester, ObjectOutputStream out)` — só envia, não recebe~~
+- ~~**Falta:** Adicionar `ObjectInputStream in` ao `handleCommand()` e a `handleCreate()`, `handleAdd()`, `handleEC()`~~
+- **FEITO:** `handleCommand`, `handleCreate`, `handleAdd`, `handleEC` agora recebem `ObjectInputStream in`
 
-### A2. `ClientSessionHandler.java` — passar `inStream` ao `CommandService`
-- **Atual (L48):** `commandService.handleCommand(command, user, outStream)`
-- **Falta:** Mudar para `commandService.handleCommand(command, user, inStream, outStream)`
+### ✅ A2. `ClientSessionHandler.java` — passar `inStream` ao `CommandService`
+- ~~**Atual (L48):** `commandService.handleCommand(command, user, outStream)`~~
+- **FEITO:** `commandService.handleCommand(command, user, inStream, outStream)`
 
-### A3. `ClientCommandLoop.java` — carregar chaves RSA da keystore
-- **Atual (L22):** Construtor `ClientCommandLoop(out, in, scanner)` — sem acesso a chaves RSA
-- **Falta:**
-  - Receber `keystorePath` e `keystorePassword` no construtor
-  - Carregar `PrivateKey` e `PublicKey` da keystore (via `KeyStore.getInstance(...)`)
-  - Adicionar imports: `javax.crypto.*`, `java.security.*`, `java.io.ByteArrayInputStream`, `java.util.HashMap`, etc.
+### ✅ A3. `ClientCommandLoop.java` — carregar chaves RSA da keystore
+- ~~**Atual (L22):** Construtor `ClientCommandLoop(out, in, scanner)` — sem acesso a chaves RSA~~
+- **FEITO:**
+  - Construtor recebe `keystorePath` e `keystorePassword`
+  - Carrega `PrivateKey` e `PublicKey` da keystore (PKCS12)
+  - Imports adicionados: `javax.crypto.*`, `java.security.*`, `CertificateFactory`
+  - Métodos auxiliares: `wrapKey`, `unwrapKey`, `encryptAES`, `decryptAES`, `extractPublicKeyFromCert`, `generateAESKey`
 
-### A4. `ClientSession.java` — passar keystore ao `ClientCommandLoop`
-- **Atual (L97):** `new ClientCommandLoop(outStream, inStream, scanner)`
-- **Falta:** Mudar para `new ClientCommandLoop(outStream, inStream, scanner, keystore, keystorePassword)`
+### ✅ A4. `ClientSession.java` — passar keystore ao `ClientCommandLoop`
+- ~~**Atual (L97):** `new ClientCommandLoop(outStream, inStream, scanner)`~~
+- **FEITO:** `new ClientCommandLoop(outStream, inStream, scanner, keystore, keystorePassword)`
 
 ---
 

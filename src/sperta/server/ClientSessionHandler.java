@@ -45,7 +45,7 @@ public class ClientSessionHandler extends Thread {
 					if (command == null) {
 						break;
 					}
-					commandService.handleCommand(command, user, outStream);
+					commandService.handleCommand(command, user, inStream, outStream);
 				}
 			} catch (EOFException eof) {
 				System.out.println("Cliente " + socket.getInetAddress() + " desconectado.");
