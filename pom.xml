@@ -101,13 +101,6 @@
                         <fileset>
                             <directory>${project.basedir}/src/sperta/data</directory>
                         </fileset>
-                        <fileset>
-                            <directory>${project.basedir}/src/sperta/server</directory>
-                            <includes>
-                                <include>attestation.txt</include>
-                                <include>attestation.txt.hash</include>
-                            </includes>
-                        </fileset>
                     </filesets>
                 </configuration>
             </plugin>
