@@ -53,23 +53,13 @@
 
 ## D. Confidencialidade E2E — Comando EC
 
-### D1. `CommandService.handleEC()` — protocolo com chave wrapped
-- **Atual:** Valida permissões, guarda valor em claro via `updateStateAndLog(hm, device, val)`
-- **Falta:**
-  1. Após verificar permissões, enviar `"OK-KEY"` (em vez de processar valor imediatamente)
-  2. Carregar chave wrapped: `repository.loadWrappedKey(hm, section, requester)`
-  3. Enviar ao cliente: `wrappedKey.length` (int) + `wrappedKey` (bytes)
-  4. Receber valor cifrado do cliente: `encLen` (int) + `encryptedVal` (bytes)
-  5. Guardar como Base64: `repository.updateStateAndLogEncrypted(hm, device, encB64)` (em vez de `updateStateAndLog`)
+### ✅ D1. `CommandService.handleEC()` — protocolo com chave wrapped
+- ~~**Atual:** Valida permissões, guarda valor em claro via `updateStateAndLog(hm, device, val)`~~
+- **FEITO:** Envia "OK-KEY" + wrapped key ao cliente, recebe valor cifrado (bytes), converte a Base64, guarda via `updateStateAndLogEncrypted`. Também adicionado `updateStateAndLogEncrypted` ao DataRepository.
 
-### D2. `ClientCommandLoop.handleEC()` — cifrar valor com chave de secção
-- **Atual:** Envia comando, recebe e imprime resposta
-- **Falta (quando resposta é `"OK-KEY"`):**
-  1. Receber chave wrapped: `keyLen` (int) + `wrappedKey` (bytes)
-  2. `unwrap` com a nossa `PrivateKey` → `SecretKey` AES
-  3. Cifrar o valor `int` com AES: `Cipher.getInstance("AES")`, `ENCRYPT_MODE`, `doFinal`
-  4. Enviar valor cifrado: `encryptedVal.length` (int) + `encryptedVal` (bytes)
-  5. Receber e imprimir confirmação final
+### ✅ D2. `ClientCommandLoop.handleEC()` — cifrar valor com chave de secção
+- ~~**Atual:** Envia comando, recebe e imprime resposta~~
+- **FEITO:** Quando recebe "OK-KEY": recebe wrapped key → unwrap com PrivateKey → cifra valor com AES → envia ciphertext → recebe "OK" final
 
 ---
 

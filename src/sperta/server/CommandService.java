@@ -192,19 +192,6 @@ public class CommandService {
 			out.flush();
 			return;
 		}
-		int val;
-		try {
-			val = Integer.parseInt(intVal);
-			if (val < 0 || val > 600) {
-				out.writeObject("NOK");
-				out.flush();
-				return;
-			}
-		} catch (NumberFormatException e) {
-			out.writeObject("NOK");
-			out.flush();
-			return;
-		}
 
 		if (!repository.houseExists(hm)) {
 			out.writeObject("NOHM");
@@ -224,9 +211,31 @@ public class CommandService {
 			return;
 		}
 
-		repository.updateStateAndLog(hm, device, val);
-		out.writeObject("OK");
-		out.flush();
+		// E2E: Enviar wrapped key ao cliente, receber valor cifrado
+		try {
+			byte[] wrappedKey = repository.loadWrappedKey(hm, section, requester);
+			if (wrappedKey == null) {
+				out.writeObject("NOK");
+				out.flush();
+				return;
+			}
+			out.writeObject("OK-KEY");
+			out.writeInt(wrappedKey.length);
+			out.write(wrappedKey);
+			out.flush();
+
+			// Receber valor cifrado do cliente
+			int encLen = in.readInt();
+			byte[] encryptedVal = new byte[encLen];
+			in.readFully(encryptedVal);
+			String encB64 = java.util.Base64.getEncoder().encodeToString(encryptedVal);
+
+			repository.updateStateAndLogEncrypted(hm, device, encB64);
+			out.writeObject("OK");
+			out.flush();
+		} catch (Exception e) {
+			System.err.println("Erro no protocolo EC E2E: " + e.getMessage());
+		}
 	}
 
 	private void handleRT(String hm, String requester, ObjectOutputStream out) throws IOException {

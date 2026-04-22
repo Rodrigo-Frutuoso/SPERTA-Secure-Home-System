@@ -660,6 +660,40 @@ public class DataRepository {
 		}
 	}
 
+	/**Guarda estado/log com valor já cifrado (Base64) pelo cliente.
+	 * O servidor não consegue ler o valor — E2E.*/
+	public void updateStateAndLogEncrypted(String hm, String device, String encryptedValB64) throws IOException {
+		synchronized (fileLock) {
+			String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
+
+			File statesDir = new File(STATES_DIR);
+			if (!statesDir.exists()) statesDir.mkdirs();
+			File statesFile = new File(STATES_DIR + hm + ".txt");
+			List<String> stateLines = readAllLines(statesFile);
+
+			boolean found = false;
+			for (int i = 0; i < stateLines.size(); i++) {
+				String[] parts = stateLines.get(i).split("\\|", 3);
+				if (parts.length >= 1 && parts[0].equals(device)) {
+					stateLines.set(i, device + "|" + encryptedValB64 + "|" + timestamp);
+					found = true;
+					break;
+				}
+			}
+			if (!found) {
+				stateLines.add(device + "|" + encryptedValB64 + "|" + timestamp);
+			}
+			writeAllLines(statesFile, stateLines);
+
+			File logsHouseDir = new File(LOGS_DIR + hm);
+			if (!logsHouseDir.exists()) logsHouseDir.mkdirs();
+			File logFile = new File(LOGS_DIR + hm + "/" + device + ".csv");
+			List<String> logLines = readAllLines(logFile);
+			logLines.add(device + "," + encryptedValB64 + "," + timestamp);
+			writeAllLines(logFile, logLines);
+		}
+	}
+
 	public byte[] readStateFile(String hm) throws IOException {
 		synchronized (fileLock) {
 			File statesFile = new File(STATES_DIR + hm + ".txt");

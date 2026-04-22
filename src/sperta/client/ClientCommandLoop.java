@@ -210,7 +210,33 @@ public class ClientCommandLoop {
 		out.writeObject("EC " + hm + " " + d + " " + intVal);
 		out.flush();
 		String response = (String) in.readObject();
-		System.out.println(response);
+
+		if ("OK-KEY".equals(response)) {
+			try {
+				// Receber wrapped key da secção
+				int keyLen = in.readInt();
+				byte[] wrappedKey = new byte[keyLen];
+				in.readFully(wrappedKey);
+
+				// Unwrap e cifrar o valor com AES
+				SecretKey sectionKey = unwrapKey(wrappedKey, privateKey);
+				byte[] valBytes = intVal.getBytes();
+				byte[] encryptedVal = encryptAES(valBytes, sectionKey);
+
+				// Enviar valor cifrado
+				out.writeInt(encryptedVal.length);
+				out.write(encryptedVal);
+				out.flush();
+
+				// Receber confirmação
+				String finalResponse = (String) in.readObject();
+				System.out.println(finalResponse);
+			} catch (Exception e) {
+				System.err.println("Erro ao cifrar valor EC: " + e.getMessage());
+			}
+		} else {
+			System.out.println(response);
+		}
 	}
 
 	private void handleRT(String hm) throws IOException, ClassNotFoundException {
