@@ -169,7 +169,7 @@ Os ficheiros `dist/SpertaServer.jar` e `dist/SpertaClient.jar` já vêm **pré-c
 |----------|------------------------------------------------|
 | `CREATE` | Criar uma nova casa                            |
 | `ADD`    | Adicionar dispositivo ou utilizador a uma casa |
-| `RD`     | Remover dispositivo                            |
+| `RD`     | Registar dispositivo                           |
 | `EC`     | Enviar comando a um dispositivo                |
 | `RT`     | Obter estado atual de todos os dispositivos    |
 | `RH`     | Obter histórico de comandos de um dispositivo  |
