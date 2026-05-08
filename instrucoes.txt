@@ -1,0 +1,48 @@
+Segurança e Confiabilidade
+2025/2026
+Projeto 2 – instruções
+1. Contexto
+Para a realização do Projeto 2 os alunos irão utilizar uma máquina virtual (disponibilizada no
+Moodle) onde terão de executar o servidor SpertaServer e o cliente SpertaClient, que foram
+desenvolvidos pelo seu grupo no Projeto 1, bem como as ferramentas iptables e snort, num
+ambiente que simula a rede de uma casa inteligente num condomínio.
+Foi construída uma simulação no emulador de redes Mininet-GUI. O simulador é disponibilizado
+através de uma máquina virtual que pode ser descarregada no Moodle (ficheiro ”mininetxGUI-VM Seg.ova”).
+2. Instruções
+Antes de realizar o segundo projeto, os alunos deverão seguir as seguintes instruções:
+1- Descarregar a máquina virtual, ficheiro ”mininetx-GUI-VM Seg.ova”,
+disponibilizada no Moodle.
+2- Importar o ficheiro ”mininetx-GUI-VM Seg.ova” para um software de
+virtualização (ex., o Oracle VirtualBox ou o Vmware Player).
+3- Executar a máquina virtual e efectuar o login com as credenciais:
+user: mininet
+pass: mininet
+4- Abrir um terminal e executar mininet_gui.
+5- Abrir no navegador Firefox o endereço fornecido no terminal.
+6- Abrir a topologia SegC.json (no navegador, selecionar File → Open Topology).
+7- Inicializar a rede (no navegador, selecionar Run → Start Network).
+8- Abrir um novo terminal da VM e executar o script:
+./config_running_network.sh
+Disponível em:
+/home/mininet/mininet-gui/mininet-gui-backend
+9- Neste momento, todas as máquinas ilustradas na Figura 1 do enunciado do Projeto 2
+estarão carregadas para o ambiente, incluindo a máquina Outsider. Esta máquina
+servirá para testar o que um atacante externo à rede poderá ou não realizar. Ao
+clicarmos em qualquer máquina com o botão direito do rato, teremos a opção “Open
+Webshell” que permite abrir o terminal da máquina selecionada. Assim, podemos usar
+e testar os comandos ping, ssh, iptables, snort, nmap, etc.
+10- Por fim, os alunos deverão encontrar uma forma de copiar as suas aplicações cliente e
+servidor do Sperta para a máquina virtual. Podem, por exemplo, fazer uma ligação entre
+a vossa máquina host (o vosso sistema operativo) e a máquina virtual, utilizar o vosso
+email, ou Dropbox, acedendo através do browser da máquina virtual. De qualquer
+forma, ao colocarem o vosso código na pasta /home/mininet/mininet-
+gui/mininet-gui-backend da máquina virtual, ele fica acessível nas máquinas
+emuladas pelo mininet-GUI.
+3. Conexão por SSH
+O servidor de SSH, por omissão, não se encontra em execução nas máquinas simuladas. Este
+pode ser colocado em execução em qualquer máquina. Para isso, devemos abrir um terminal
+na máquina que pretendemos que seja um servidor de SSH e executar o comando seguinte:
+$ sudo /usr/sbin/sshd -D
+Nas máquinas que pretendemos conectar ao servidor SSH (máquinas clientes de SSH), através
+do seu terminal, devemos usar o seguinte comando e password mininet:
+$ ssh -X ip-destino
