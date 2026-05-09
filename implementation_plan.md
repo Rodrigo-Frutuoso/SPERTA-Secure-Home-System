@@ -42,14 +42,14 @@ Antes de escrever regras, é fundamental descobrir os IPs de cada máquina na to
 
 | Máquina | IP (a preencher) | Sub-rede |
 |---------|-------------------|----------|
-| **SperServ** | `?.?.?.?` | `?.?.?.0/24` |
-| **SperCli1** | `?.?.?.?` | `?.?.?.0/24` (sub-rede dos clientes) |
-| **SperCli2** | `?.?.?.?` | mesma sub-rede de SperCli1 |
-| **SperAdm** | `?.?.?.?` | — |
-| **CondAdm** | `?.?.?.?` | — |
-| **CondServ** | `?.?.?.?` | — |
-| **Broker** | `?.?.?.?` | — |
-| **Outsider** | `?.?.?.?` | fora da rede (atacante) |
+| **SperServ** | `10.0.0.2` | `10.0.0.0/24` |
+| **SperCli1** | `10.0.1.3` | `10.0.1.0/24` (sub-rede dos clientes) |
+| **SperCli2** | `10.0.1.4` | `10.0.1.0/24` (mesma sub-rede de SperCli1) |
+| **SperAdm** | `10.0.0.3` | `10.0.0.0/24` (mesma sub-rede de SperServ) |
+| **CondAdm** | `10.0.3.2` | `10.0.3.0/24` |
+| **CondServ** | `10.0.3.3` | `10.0.3.0/24` (mesma sub-rede de CondAdm) |
+| **Broker** | `10.0.2.4` | `10.0.2.0/25` |
+| **Outsider** | `10.10.0.2` | `10.10.0.0/24` (fora da rede interna — atacante) |
 
 > [!TIP]
 > Nas regras abaixo, substituir as variáveis (ex: `$CLIENTES_SUBNET`) pelos IPs reais descobertos.
@@ -76,13 +76,13 @@ Criar um ficheiro `firewall.sh` a executar na webshell de **SperServ**:
 # ============================================================
 
 # ──────────────── VARIÁVEIS (PREENCHER) ─────────────────────
-SPERSERV_IP="?.?.?.?"             # IP de SperServ
-SPERSERV_SUBNET="?.?.?.0/24"     # Sub-rede de SperServ
-CLIENTES_SUBNET="?.?.?.0/24"     # Sub-rede de SperCli1/SperCli2
-SPERADM_IP="?.?.?.?"             # IP de SperAdm
-CONDADM_IP="?.?.?.?"             # IP de CondAdm
-CONDSERV_IP="?.?.?.?"            # IP de CondServ
-BROKER_IP="?.?.?.?"              # IP de Broker
+SPERSERV_IP="10.0.0.2"             # IP de SperServ
+SPERSERV_SUBNET="10.0.0.0/24"     # Sub-rede de SperServ
+CLIENTES_SUBNET="10.0.1.0/24"     # Sub-rede de SperCli1/SperCli2
+SPERADM_IP="10.0.0.3"             # IP de SperAdm
+CONDADM_IP="10.0.3.2"             # IP de CondAdm
+CONDSERV_IP="10.0.3.3"            # IP de CondServ
+BROKER_IP="10.0.2.4"              # IP de Broker
 SPERTA_PORT=22345                # Porto do SpertaServer (SSL)
 # ──────────────────────────────────────────────────────────────
 
@@ -203,7 +203,7 @@ alert tcp any any -> $HOME_NET 22345 (msg:"[ALERTA] Possível tentativa de brute
 # ────── Regra 3: Acesso externo ao SpertaServer ──────
 # Alerta quando uma máquina FORA da sub-rede dos clientes tenta ligar ao porto 22345.
 # Nota: substituir ?.?.?.0/24 pela sub-rede real dos clientes.
-alert tcp !?.?.?.0/24 any -> $HOME_NET 22345 (msg:"[ALERTA] Tentativa de ligação ao SpertaServer de fora da sub-rede autorizada"; flags:S; sid:1000003; rev:1;)
+alert tcp !10.0.1.0/24 any -> $HOME_NET 22345 (msg:"[ALERTA] Tentativa de ligação ao SpertaServer de fora da sub-rede autorizada"; flags:S; sid:1000003; rev:1;)
 
 # ────── Regra 4: ICMP Flood (DDoS) ──────
 # Alerta quando SperServ recebe mais de 4 pings por segundo (qualquer origem).
@@ -243,7 +243,7 @@ sudo snort -A console -q -c /path/to/sperta.rules -i <INTERFACE>
 - `-A console`: Alertas na consola
 - `-q`: Modo silencioso (menos output)
 - `-c`: Ficheiro de regras
-- `-i`: Interface de rede (descobrir com `ip a` — provavelmente `eth0` ou similar)
+- `-i`: Interface de rede → usar `SperServ-eth0`
 
 > [!IMPORTANT]
 > Pode ser necessário criar um `snort.conf` mínimo ou usar `-c` apontando diretamente para o ficheiro de regras. Se o snort exigir `snort.conf`, incluir a linha `include sperta.rules` no ficheiro de configuração.
