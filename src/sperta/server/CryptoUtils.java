@@ -12,7 +12,7 @@ import java.util.Base64;
 
 public class CryptoUtils {
 
-	private static final String na = "SHA-256";
+	private static final String HASH_ALGORITHM = "SHA-256";
 	private static final int SALT_SIZE = 16; // 16 bytes
 
 	public static byte[] generateSalt() {

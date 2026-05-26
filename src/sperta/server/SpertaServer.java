@@ -55,6 +55,19 @@ public class SpertaServer {
 		server.startSSLServer(port);
 	}
 
+	public void startServer(int port) {
+		try (ServerSocket serverSocket = new ServerSocket(port)) {
+			while (true) {
+				Socket inSoc = serverSocket.accept();
+				ClientSessionHandler session = new ClientSessionHandler(inSoc, authService, commandService);
+				session.start();
+			}
+		} catch (IOException e) {
+			System.err.println(e.getMessage());
+			System.exit(-1);
+		}
+	}
+
 	public void startSSLServer(int port) {
 		try {
 			ServerSocketFactory ssf = SSLServerSocketFactory.getDefault();
@@ -71,21 +84,4 @@ public class SpertaServer {
 			System.exit(-1);
 		}
 	}
-
-
-	
-	public void startServer(int port) {
-		try (ServerSocket serverSocket = new ServerSocket(port)) {
-			while (true) {
-				Socket inSoc = serverSocket.accept();
-				ClientSessionHandler session = new ClientSessionHandler(inSoc, authService, commandService);
-				session.start();
-			}
-		} catch (IOException e) {
-			System.err.println(e.getMessage());
-			System.exit(-1);
-		}
-	}
-
-	
 }
