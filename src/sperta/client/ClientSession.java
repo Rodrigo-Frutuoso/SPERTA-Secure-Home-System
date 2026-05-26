@@ -112,7 +112,7 @@ public class ClientSession {
 			try (FileInputStream fis = new FileInputStream(keystorePath)) {
 				ks.load(fis, keystorePassword.toCharArray());
 			}
-
+w
 			Certificate cert = ks.getCertificate(user);
 
 			if (cert == null) {
@@ -136,6 +136,7 @@ public class ClientSession {
 			outStream.write(certBytes);
 			outStream.flush();
 			System.out.println("Certificado enviado ao servidor (" + certBytes.length + " bytes)");
+			
 		} catch (Exception e) {
 			System.err.println("Erro ao enviar certificado: " + e.getMessage());
 			try {

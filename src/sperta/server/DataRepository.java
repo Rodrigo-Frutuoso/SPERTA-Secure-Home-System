@@ -869,7 +869,7 @@ public class DataRepository {
 		}
 	}
 
-	/**Devolve o owner de uma casa, ou null se não existir.*/
+	/**Devolve o owner de uma casa, ou null se não existir.*/	
 	public String getOwner(String hm) {
 		synchronized (fileLock) {
 			List<String> lines = readAllLines(new File(HOUSES_FILE));

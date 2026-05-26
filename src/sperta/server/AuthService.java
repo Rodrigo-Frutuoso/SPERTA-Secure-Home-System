@@ -34,13 +34,13 @@ public class AuthService {
 		outStream.flush();
 		int hashLen = inStream.readInt();
 		byte[] clientHash = new byte[hashLen];
-		inStream.readFully(clientHash);
+			
 		// "o servidor o comparará com o hash calculado localmente com base na
 		// concatenação entre o mesmo nonce e uma cópia de referência da aplicação
 		// SpertaClient"
 		byte[] expectedHash = computeAttestationHash(nonce);
 		if (expectedHash == null) {
-			outStream.writeObject("NOK-ATTEST");
+			outStream.writeObject("NOK-ATTEST");		
 			outStream.flush();
 			return false;
 		}
