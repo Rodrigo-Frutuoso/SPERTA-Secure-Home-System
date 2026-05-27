@@ -18,7 +18,7 @@ var HOME_NET 10.0.0.2
 # ────── Regra 1: Port Scanning ──────
 # Alerta quando a mesma máquina faz 20+ ligações TCP a portos < 1024 
 # em 60 segundos. Apenas 1 alerta por minuto.
-alert tcp any any -> $HOME_NET 1:1023 (msg:"[ALERTA] Possível varrimento de portos - 20+ ligações TCP a portos < 1024 em 60s"; flags:S; threshold:type threshold, track by_src, count 20, seconds 60; sid:1000001; rev:1;)
+alert tcp any any -> $HOME_NET 1:1023 (msg:"[ALERTA] Possível varrimento de portos - 20+ ligações TCP a portos < 1024 em 60s"; flags:S; threshold:type limit, track by_dst, count 1, seconds 60; sid:1000001; rev:1;)
 
 # ────── Regra 2: Brute-Force no SpertaServer ──────
 # Alerta a cada 3 ligações da mesma máquina ao porto 22345 em 20 segundos.
@@ -32,4 +32,4 @@ alert tcp !10.0.1.0/24 any -> $HOME_NET 22345 (msg:"[ALERTA] Tentativa de ligaç
 # ────── Regra 4: ICMP Flood (DDoS) ──────
 # Alerta quando SperServ recebe mais de 4 pings por segundo (qualquer origem).
 # Apenas 1 alerta por segundo.
-alert icmp any any -> $HOME_NET any (msg:"[ALERTA] Possível ICMP flood - mais de 4 pings/segundo"; itype:8; threshold:type threshold, track by_dst, count 5, seconds 1; sid:1000004; rev:1;)
+alert icmp any any -> $HOME_NET any (msg:"[ALERTA] Possível ICMP flood - mais de 4 pings/segundo"; itype:8; threshold:type limit, track by_dst, count 1, seconds 1; sid:1000004; rev:1;)
