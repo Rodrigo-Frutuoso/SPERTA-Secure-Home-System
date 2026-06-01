@@ -1,107 +1,108 @@
 # 🏠 SPERTA
 
-> **Segurança e Confiabilidade 2025/26 — Projeto 1 (Fase 2)**  
-> Sistema de gestão de dispositivos domésticos com autenticação, atestação e controlo de acesso por utilizador.
+> **Security and Dependability 2025/26 — Project 1**
+> Home device management system with authentication, attestation and per-user access control.
 
 ---
 
-## 🔧 Dependências
+## 🔧 Dependencies
 
-| Ferramenta     | Versão Mínima |
-|----------------|---------------|
-| Java JDK       | 21+           |
-| Apache Maven   | 3.9+          |
+| Tool          | Minimum Version |
+|---------------|------------------|
+| Java JDK      | 21+              |
+| Apache Maven  | 3.9+             |
 
-> Compatível com **Windows**, **Linux** e **macOS**.
+Compatible with **Windows**, **Linux** and **macOS**.
 
 ---
 
-## ⚙️ Compilação
+## ⚙️ Build
+
+Run:
 
 ```bash
 mvn clean package
 ```
 
-O Maven irá:
-- Compilar cliente e servidor para `out-client/` e `out-server/`
-- Gerar os JARs em `dist/`:
+Maven will:
+- Compile client and server into `out-client/` and `out-server/`
+- Produce JARs in `dist/`:
   - `dist/SpertaClient.jar`
   - `dist/SpertaServer.jar`
-- Atualizar `src/sperta/server/attestation.txt` com o caminho da cópia de referência do `SpertaClient.jar`
+- Update `src/sperta/server/attestation.txt` with the path to the reference copy of `SpertaClient.jar`
 
 ---
 
-## ▶️ Execução
+## ▶️ Run
 
-### Servidor
+### Server
 
 ```bash
 java -jar dist/SpertaServer.jar <port> <cipher-password> <keystore> <keystore-password>
 ```
 
-> Se não for indicado um porto, o servidor usa o porto por omissão **22345**.
-> O `cipher-password` é a palavra-passe usada para cifrar os ficheiros do servidor.
+If no port is provided, the server uses the default port **22345**.
+The `cipher-password` is used to encrypt the server data files.
 
-**Exemplo:**
+Example:
+
 ```bash
 java -jar dist/SpertaServer.jar 22345 secret src/sperta/certs/server.keystore server-password
 ```
 
-### Cliente *(noutro terminal)*
+### Client (in another terminal)
 
 ```bash
 java -jar dist/SpertaClient.jar <serverAddress> <truststore> <trust-pass> <keystore> <key-pass> <user> <password>
 ```
 
-> Regra de sessao: o servidor permite apenas uma sessao ativa por utilizador.
-> Se o mesmo user tentar autenticar num segundo cliente em simultaneo,
-> a segunda ligacao e rejeitada com `USER-ALREADY-CONNECTED`.
+Session rule: the server allows only one active session per user.
+If the same user attempts to authenticate a second simultaneous client,
+the second connection is rejected with `USER-ALREADY-CONNECTED`.
 
-**Exemplo (mesmo PC):**
+Example (same machine):
 
 ```bash
 java -jar dist/SpertaClient.jar localhost:22345 src/sperta/certs/client.truststore truststore-password src/sperta/certs/client.keystore client-password rodrigo frutas
-
 ```
 
 ---
 
-## 🌐 Execução em PCs Diferentes (Rede Local)
-
-O servidor e o cliente podem correr em máquinas distintas na mesma rede.
-Os ficheiros `dist/SpertaServer.jar` e `dist/SpertaClient.jar` já vêm **pré-compilados** no projeto — **não é necessário compilar**.
+## 🌐 Running on different machines (Local Network)
+The server and the client can run on different machines within the same local network.
+The pre-built artifacts `dist/SpertaServer.jar` and `dist/SpertaClient.jar` are included in the project — rebuilding is not required.
 
 > [!IMPORTANT]
-> **Atestação:** o servidor valida o hash SHA-256 de `SpertaClient.jar`.
-> Ambos os PCs devem usar o **mesmo** `SpertaClient.jar` (o que vem na pasta `dist/`).
-> **Nunca recompilar separadamente** em cada PC, pois os JARs podem diferir e a atestação falha.
+> **Attestation:** the server validates the SHA-256 hash of `SpertaClient.jar`.
+> Both machines must use the **same** `SpertaClient.jar` (the one from the `dist/` folder).
+> **Do not recompile separately** on each machine — otherwise the JARs may differ and the attestation will fail.
 
-### Passo a passo
+### Step-by-step
 
-1. **Copiar a pasta do projeto** (ou apenas a pasta `dist/`) para ambos os PCs (pen USB, partilha de rede, etc.).
+1. **Copy the project folder** (or at least the `dist/` folder) to both machines (USB drive, network share, etc.).
 
-2. **No PC do servidor** — iniciar o servidor:
-   ```bash
-   java -jar dist/SpertaServer.jar 22345 secret src/sperta/certs/server.keystore server-password
-   ```
+2. **On the server machine** — start the server:
+  ```bash
+  java -jar dist/SpertaServer.jar 22345 secret src/sperta/certs/server.keystore server-password
+  ```
 
-3. **No PC do cliente** — usar o IP do servidor (ex: `192.168.1.100`):
-   ```bash
-   java -jar dist/SpertaClient.jar 192.168.1.100:22345 src/sperta/certs/client.truststore truststore-password src/sperta/certs/client.keystore client-password <user> <password>
-   ```
+3. **On the client machine** — use the server IP address (e.g. `192.168.1.100`):
+  ```bash
+  java -jar dist/SpertaClient.jar 192.168.1.100:22345 src/sperta/certs/client.truststore truststore-password src/sperta/certs/client.keystore client-password <user> <password>
+  ```
 
 > [!NOTE]
-> Para descobrir o IP do PC servidor, executar `ipconfig` (Windows) ou `ip a` (Linux/macOS).
+> To find the server IP address run `ipconfig` (Windows) or `ip a` (Linux/macOS).
 
-### Requisitos de rede
+### Network requirements
 
-- Ambos os PCs devem estar na **mesma rede local** (Wi-Fi ou cabo).
-- A **firewall** do PC servidor deve permitir ligações na porta utilizada (ex: 12345).
-  No Windows, ao iniciar o servidor pela primeira vez, clicar em **"Permitir acesso"** na janela da firewall.
+- Both machines must be on the **same local network** (Wi‑Fi or wired).
+- The server machine's **firewall** must allow incoming connections on the chosen port (e.g. 22345).
+  On Windows, when starting the server for the first time, click **"Allow access"** in the firewall prompt.
 
 ---
 
-## 📁 Estrutura do Projeto
+## 📁 Project Structure
 
 ```
 .
@@ -122,40 +123,40 @@ Os ficheiros `dist/SpertaServer.jar` e `dist/SpertaClient.jar` já vêm **pré-c
 │   └── SpertaServer.class
 │
 ├── src/sperta/
-│   ├── certs/                        # Infraestrutura criptográfica
+│   ├── certs/                        # Cryptographic infrastructure
 │   │   ├── client.keystore
 │   │   ├── client.truststore
 │   │   ├── server.cer
 │   │   └── server.keystore
 │   │
 │   ├── client/
-│   │   ├── ClientCommandLoop.java    # Parser, menu e comandos
-│   │   ├── ClientSession.java        # Socket, atestação e autenticação
-│   │   └── SpertaClient.java         # Ponto de entrada do cliente
+│   │   ├── ClientCommandLoop.java    # Parser, menu and commands
+│   │   ├── ClientSession.java        # Socket, attestation and authentication
+│   │   └── SpertaClient.java         # Client entry point
 │   │
-│   ├── data/                         # Gerado em runtime
-│   │   ├── server/                   # Persistência interna do servidor
-│   │   │   ├── certs/                # Certificados de utilizadores
+│   ├── data/                         # Generated at runtime
+│   │   ├── server/                   # Server internal persistence
+│   │   │   ├── certs/                # User certificates
 │   │   │   │   └── <user>.cer
 │   │   │   ├── houses/
-│   │   │   │   └── <casa>.txt        # Permissões e dispositivos por casa
+│   │   │   │   └── <house>.txt       # Permissions and devices per house
 │   │   │   ├── logs/
-│   │   │   │   └── <casa>/<disp>.csv # Histórico por dispositivo
+│   │   │   │   └── <house>/<dev>.csv # Device command history
 │   │   │   ├── states/
-│   │   │   │   └── <casa>.txt        # Último estado de cada dispositivo
-│   │   │   ├── all_houses.txt        # Casas: casa|owner|contadores
-│   │   │   └── user.txt              # Utilizadores: formato hash+salt
+│   │   │   │   └── <house>.txt       # Last known state of each device
+│   │   │   ├── all_houses.txt        # Houses: house|owner|counters
+│   │   │   └── user.txt              # Users: stored as hash+salt
 │   │   └── client/
-│   │       └── downloads/            # Ficheiros recebidos nos comandos RT/RH
+│   │       └── downloads/            # Files received via RT/RH commands
 │   │
 │   └── server/
-│       ├── AuthService.java          # Atestação e autenticação
-│       ├── ClientSessionHandler.java # Thread por cliente
-│       ├── CommandService.java       # Lógica dos comandos (CREATE/ADD/RD/EC/RT/RH)
-│       ├── CryptoUtils.java          # Funções de hash, base64 e crypto
-│       ├── DataRepository.java       # Persistência e ficheiros
-│       ├── SpertaServer.java         # Ponto de entrada do servidor
-│       └── attestation.txt           # Path da cópia de referência do JAR do cliente
+│       ├── AuthService.java          # Attestation and authentication
+│       ├── ClientSessionHandler.java # Thread per client
+│       ├── CommandService.java       # Command logic (CREATE/ADD/RD/EC/RT/RH)
+│       ├── CryptoUtils.java          # Hashing, base64 and crypto helpers
+│       ├── DataRepository.java       # Persistence and file handling
+│       ├── SpertaServer.java         # Server entry point
+│       └── attestation.txt           # Path to the reference copy of the client JAR
 │
 ├── pom.xml
 └── README.md
@@ -163,26 +164,26 @@ Os ficheiros `dist/SpertaServer.jar` e `dist/SpertaClient.jar` já vêm **pré-c
 
 ---
 
-## 📟 Comandos Disponíveis
+## 📟 Available Commands
 
-| Comando  | Descrição                                      |
+| Command  | Description                                    |
 |----------|------------------------------------------------|
-| `CREATE` | Criar uma nova casa                            |
-| `ADD`    | Adicionar dispositivo ou utilizador a uma casa |
-| `RD`     | Registar dispositivo                           |
-| `EC`     | Enviar comando a um dispositivo                |
-| `RT`     | Obter estado atual de todos os dispositivos    |
-| `RH`     | Obter histórico de comandos de um dispositivo  |
+| `CREATE` | Create a new house                             |
+| `ADD`    | Add a device or user to a house                |
+| `RD`     | Register a device                              |
+| `EC`     | Send a command to a device                     |
+| `RT`     | Retrieve current state of all devices          |
+| `RH`     | Retrieve command history for a device          |
 
 ---
 
-## 🧹 Limpeza
+## 🧹 Cleanup
 
 ```bash
 mvn clean
 ```
 
-Remove os seguintes artefactos gerados:
+Removes the following generated artifacts:
 
 - `out-client/`
 - `out-server/`
@@ -192,25 +193,25 @@ Remove os seguintes artefactos gerados:
 
 ---
 
-## ⚡ Referência Rápida
+## ⚡ Quick Reference
 
 ```bash
-# Compilar
+# Build
 mvn clean package
 
-# Iniciar servidor
+# Start server
 java -jar dist/SpertaServer.jar 22345 secret src/sperta/certs/server.keystore server-password
 
-# Iniciar cliente
+# Start client
 java -jar dist/SpertaClient.jar localhost:22345 src/sperta/certs/client.truststore truststore-password src/sperta/certs/client.keystore client-password <user> <password>
 
-# Limpar
+# Clean
 mvn clean
 ```
 
 ---
 
-## 🔑 Passwords dos Utilizadores
+## 🔑 User Passwords (example)
 
 - `rodrigo`: `frutas`
 - `tiago`: `leite1`
